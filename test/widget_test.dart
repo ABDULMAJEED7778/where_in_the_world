@@ -1,8 +1,6 @@
 // This is a basic Flutter widget test for the Where in the World game.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:provider/provider.dart';
 
 import 'package:where_in_the_world/providers/game_provider.dart';
 import 'package:where_in_the_world/models/game_models.dart';

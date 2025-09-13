@@ -59,7 +59,7 @@ class _GameLobbyScreenState extends State<GameLobbyScreen> {
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.normal,
                     ),
                   ),
                   const SizedBox(height: 30),
@@ -67,12 +67,19 @@ class _GameLobbyScreenState extends State<GameLobbyScreen> {
                   const SizedBox(height: 20),
                   _buildDifficultySection(),
                   const SizedBox(height: 20),
-                  _buildRoundsSection(),
-                  const SizedBox(height: 20),
-                  _buildQuestionsSection(),
-                  const SizedBox(height: 20),
-                  _buildPlayerList(),
-                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      _buildRoundsSection(),
+                      const SizedBox(width: 40),
+                      _buildQuestionsSection(),
+                    ],
+                  ),
+                  const SizedBox(height: 40),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: _buildPlayerList(),
+                  ),
+                  const SizedBox(height: 0),
                   _buildAddPlayerSection(),
                   const SizedBox(height: 30),
                   _buildRulesSection(),
@@ -148,36 +155,31 @@ class _GameLobbyScreenState extends State<GameLobbyScreen> {
   }
 
   Widget _buildGameModeSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Row(
       children: [
-        const Text(
+        Text(
           'GAME MODE:',
           style: TextStyle(
             color: Colors.white,
             fontSize: 16,
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.normal,
           ),
         ),
-        const SizedBox(height: 10),
-        Row(
-          children: [
-            Expanded(
-              child: _buildModeButton(
-                'MULTIPLAYER',
-                GameMode.multiplayer,
-                _selectedGameMode == GameMode.multiplayer,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _buildModeButton(
-                'SINGLE PLAYER',
-                GameMode.singlePlayer,
-                _selectedGameMode == GameMode.singlePlayer,
-              ),
-            ),
-          ],
+        SizedBox(width: 20.0),
+        Expanded(
+          child: _buildModeButton(
+            'MULTIPLAYER',
+            GameMode.multiplayer,
+            _selectedGameMode == GameMode.multiplayer,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _buildModeButton(
+            'SINGLE PLAYER',
+            GameMode.singlePlayer,
+            _selectedGameMode == GameMode.singlePlayer,
+          ),
         ),
       ],
     );
@@ -190,23 +192,41 @@ class _GameLobbyScreenState extends State<GameLobbyScreen> {
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
         decoration: BoxDecoration(
           color: isSelected ? const Color(0xFF74E67C) : const Color(0xFFE63C3D),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(40),
+          border: BoxBorder.all(color: Colors.black, width: 1.0),
         ),
-        child: Text(
-          text,
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
+        child: Stack(
+          alignment: AlignmentDirectional.center,
+          children: [
+            // Black stroke
+            Text(
+              text,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                foreground: Paint()
+                  ..style = PaintingStyle.stroke
+                  ..strokeWidth = 2
+                  ..color = Colors.black,
+              ),
+            ),
+            // White fill
+            Text(
+              text,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
   Widget _buildDifficultySection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Row(
       children: [
         const Text(
           'DIFFICULTY:',
@@ -216,33 +236,29 @@ class _GameLobbyScreenState extends State<GameLobbyScreen> {
             fontWeight: FontWeight.bold,
           ),
         ),
-        const SizedBox(height: 10),
-        Row(
-          children: [
-            Expanded(
-              child: _buildDifficultyButton(
-                'EASY',
-                Difficulty.easy,
-                _selectedDifficulty == Difficulty.easy,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _buildDifficultyButton(
-                'MODERATE',
-                Difficulty.moderate,
-                _selectedDifficulty == Difficulty.moderate,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _buildDifficultyButton(
-                'DIFFICULT',
-                Difficulty.difficult,
-                _selectedDifficulty == Difficulty.difficult,
-              ),
-            ),
-          ],
+        SizedBox(width: 20.0),
+        Expanded(
+          child: _buildDifficultyButton(
+            'EASY',
+            Difficulty.easy,
+            _selectedDifficulty == Difficulty.easy,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _buildDifficultyButton(
+            'MODERATE',
+            Difficulty.moderate,
+            _selectedDifficulty == Difficulty.moderate,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _buildDifficultyButton(
+            'DIFFICULT',
+            Difficulty.difficult,
+            _selectedDifficulty == Difficulty.difficult,
+          ),
         ),
       ],
     );
@@ -253,30 +269,48 @@ class _GameLobbyScreenState extends State<GameLobbyScreen> {
     Difficulty difficulty,
     bool isSelected,
   ) {
-    Color color;
+    Color colorBn;
     if (isSelected) {
-      color = const Color(0xFF74E67C); // Green
+      colorBn = const Color(0xFF74E67C); // Green
     } else if (difficulty == Difficulty.moderate) {
-      color = const Color(0xFFF3D42B); // Yellow
+      colorBn = const Color(0xFFF3D42B); // Yellow
     } else {
-      color = const Color(0xFFE63C3D); // Red
+      colorBn = const Color(0xFFE63C3D); // Red
     }
 
     return GestureDetector(
       onTap: () => setState(() => _selectedDifficulty = difficulty),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Text(
-          text,
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: 12,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 2),
+        child: OutlinedButton(
+          style: OutlinedButton.styleFrom(
+            side: BorderSide(color: colorBn, width: 2),
+          ),
+          onPressed: () {},
+          child: Stack(
+            children: [
+              Text(
+                text,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.normal,
+                  foreground: Paint()
+                    ..style = PaintingStyle.stroke
+                    ..strokeWidth = 2
+                    ..color = Colors.black,
+                ),
+              ),
+              Text(
+                text,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.normal,
+                  fontSize: 14,
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -292,13 +326,13 @@ class _GameLobbyScreenState extends State<GameLobbyScreen> {
           style: TextStyle(
             color: Colors.white,
             fontSize: 16,
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.normal,
           ),
         ),
+        SizedBox(width: 16.0),
         Row(
           children: [
             _buildNumberField(_numberOfRounds),
-            const SizedBox(width: 10),
             Column(
               children: [
                 _buildArrowButton(Icons.keyboard_arrow_up, () {
@@ -321,18 +355,20 @@ class _GameLobbyScreenState extends State<GameLobbyScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        const Text(
-          'NO. OF QUESTIONS FOR EACH PLAYER:',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
+        SizedBox(
+          width: 152,
+          child: const Text(
+            'NO. OF QUESTIONS FOR EACH PLAYER:',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.normal,
+            ),
           ),
         ),
         Row(
           children: [
             _buildNumberField(_questionsPerPlayer),
-            const SizedBox(width: 10),
             Column(
               children: [
                 _buildArrowButton(Icons.keyboard_arrow_up, () {
@@ -353,18 +389,21 @@ class _GameLobbyScreenState extends State<GameLobbyScreen> {
 
   Widget _buildNumberField(int value) {
     return Container(
-      width: 60,
+      width: 50,
       height: 40,
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(12.0),
+          bottomLeft: Radius.circular(12.0),
+        ),
       ),
       child: Center(
         child: Text(
           value.toString(),
           style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
+            fontSize: 20,
+            fontWeight: FontWeight.normal,
             color: Colors.black,
           ),
         ),
@@ -380,7 +419,9 @@ class _GameLobbyScreenState extends State<GameLobbyScreen> {
         height: 20,
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(4),
+          borderRadius: icon == Icons.keyboard_arrow_down
+              ? BorderRadius.only(bottomRight: Radius.circular(12.0))
+              : BorderRadius.only(topRight: Radius.circular(12.0)),
         ),
         child: Icon(icon, size: 16, color: Colors.black),
       ),
@@ -398,7 +439,7 @@ class _GameLobbyScreenState extends State<GameLobbyScreen> {
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 16,
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.normal,
               ),
             ),
             const SizedBox(height: 10),
@@ -460,10 +501,34 @@ class _GameLobbyScreenState extends State<GameLobbyScreen> {
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF74E67C), // Green
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(40),
             ),
           ),
-          child: const Text('ADD', style: TextStyle(color: Colors.white)),
+          child: Stack(
+            children: [
+              Text(
+                "ADD",
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 16,
+                  letterSpacing: 1,
+                  fontWeight: FontWeight.normal,
+                  foreground: Paint()
+                    ..style = PaintingStyle.stroke
+                    ..strokeWidth = 2
+                    ..color = Colors.black,
+                ),
+              ),
+              const Text(
+                'ADD',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  letterSpacing: 1,
+                ),
+              ),
+            ],
+          ),
         ),
       ],
     );
@@ -482,18 +547,39 @@ class _GameLobbyScreenState extends State<GameLobbyScreen> {
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 16,
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.normal,
               ),
             ),
           ],
         ),
         const SizedBox(height: 10),
-        const Text(
-          '• PLAYER WHO ASKED THE LAST QUESTION HAS THE PRIORITY TO GUESS.\n'
-          '• CANCELLATION OF A GUESS AFTER PRESSING THE GUESS BUTTON IS NOT ALLOWED.\n'
-          '• PLAYERS ARE ALLOWED TO DIRECTLY GUESS AT THEIR TURN POINT IN THE GAME.\n'
-          '• IN CASE NO PLAYER GUESSES THE RIGHT COUNTRY, THE PLAYER WITH A GUESS OF THE NEAREST COUNTRY TO THE CAPITAL IS GIVEN ONE POINT.',
-          style: TextStyle(color: Colors.white70, fontSize: 12),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '• PLAYER WHO ASKED THE LAST QUESTION HAS THE PRIORITY TO GUESS.',
+              style: const TextStyle(color: Colors.white70, fontSize: 12),
+              textAlign: TextAlign.justify,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '• CANCELLATION OF A GUESS AFTER PRESSING THE GUESS BUTTON IS NOT ALLOWED.',
+              style: const TextStyle(color: Colors.white70, fontSize: 12),
+              textAlign: TextAlign.justify,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '• PLAYERS ARE ALLOWED TO DIRECTLY GUESS AT THEIR TURN POINT IN THE GAME.',
+              style: const TextStyle(color: Colors.white70, fontSize: 12),
+              textAlign: TextAlign.justify,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '• IN CASE NO PLAYER GUESSES THE RIGHT COUNTRY, THE PLAYER WITH A GUESS OF THE NEAREST COUNTRY TO THE CAPITAL IS GIVEN ONE POINT.',
+              style: const TextStyle(color: Colors.white70, fontSize: 12),
+              textAlign: TextAlign.justify,
+            ),
+          ],
         ),
       ],
     );
@@ -503,11 +589,20 @@ class _GameLobbyScreenState extends State<GameLobbyScreen> {
     return Consumer<GameProvider>(
       builder: (context, gameProvider, child) {
         return Container(
-          width: double.infinity,
+          width: 200,
           height: 50,
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFFF3D42B), Color(0xFF74E67C)], // Yellow to Green
+            gradient: const SweepGradient(
+              colors: [
+                Color(0xFFE63C3D),
+                Color(0xFFEB7A36),
+                Color(0xFFF3D42B),
+                Color(0xFFEB7A36),
+                Color(0xFFE63C3D),
+              ],
+              stops: [0.31, 0.52, 0.64, 0.9, 0.99],
+              startAngle: 0.9,
+              tileMode: TileMode.mirror,
             ),
             borderRadius: BorderRadius.circular(25),
           ),
@@ -537,13 +632,30 @@ class _GameLobbyScreenState extends State<GameLobbyScreen> {
                 borderRadius: BorderRadius.circular(25),
               ),
             ),
-            child: const Text(
-              'PLAY!',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
+            child: Stack(
+              children: [
+                Text(
+                  "PLAY!",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.normal,
+                    foreground: Paint()
+                      ..style = PaintingStyle.stroke
+                      ..strokeWidth = 2
+                      ..color = Colors.black,
+                  ),
+                ),
+
+                const Text(
+                  'PLAY!',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.normal,
+                  ),
+                ),
+              ],
             ),
           ),
         );
