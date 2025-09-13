@@ -33,7 +33,7 @@ class _GameLobbyScreenState extends State<GameLobbyScreen> {
         child: SingleChildScrollView(
           child: Container(
             width: MediaQuery.of(context).size.width * 0.9,
-            constraints: const BoxConstraints(maxWidth: 500),
+            constraints: const BoxConstraints(maxWidth: 540),
             decoration: BoxDecoration(
               color: const Color(
                 0xFF2D1B69,

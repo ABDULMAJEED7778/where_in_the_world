@@ -37,7 +37,7 @@ class WhereInTheWorldApp extends StatelessWidget {
                 ),
               ).copyWith(
                 bodyMedium: GoogleFonts.hanaleiFill(
-                  textStyle: const TextStyle(letterSpacing: 2.0),
+                  textStyle: const TextStyle(letterSpacing: 1.0),
                 ),
                 bodySmall: GoogleFonts.hanaleiFill(
                   textStyle: const TextStyle(letterSpacing: 1.5),
