@@ -13,6 +13,7 @@ class MainGameScreen extends StatefulWidget {
 }
 
 class _MainGameScreenState extends State<MainGameScreen> {
+  late MediaQuery mediaQuery;
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -25,22 +26,41 @@ class _MainGameScreenState extends State<MainGameScreen> {
             return _buildGameEndScreen(gameState);
           }
 
-          return Column(
+          return Row(
             children: [
-              _buildTopBar(gameState),
+              // Left Column: Logo, Photo, and Last Questions
               Expanded(
-                child: SingleChildScrollView(
+                flex: 2,
+                child: Column(
+                  children: [
+                    // Photo section
+                    Expanded(
+                      flex: 3,
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: _buildLandmarkImage(gameState),
+                      ),
+                    ),
+                    // Last Questions section
+                    Expanded(
+                      flex: 1,
+                      child: _buildLastQuestionsSection(gameState),
+                    ),
+                  ],
+                ),
+              ),
+              // Right Column: Leaderboard, Current Turn, and Action Buttons
+              Expanded(
+                flex: 1,
+                child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     children: [
-                      _buildLandmarkImage(gameState),
-                      const SizedBox(height: 20),
-                      _buildLastQuestionsSection(gameState),
-                      const SizedBox(height: 20),
+                      _buildTopBar(gameState),
                       _buildLeaderboard(gameState),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 16),
                       _buildCurrentPlayer(gameState),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 16),
                       _buildActionButtons(gameState),
                     ],
                   ),
@@ -59,53 +79,20 @@ class _MainGameScreenState extends State<MainGameScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Text(
-            'Game main screen',
-            style: TextStyle(color: Colors.grey, fontSize: 16),
-          ),
           Row(
             children: [
-              // Logo in top bar
-              Container(
-                width: 40,
-                height: 40,
-                decoration: const BoxDecoration(shape: BoxShape.circle),
-                child: ClipOval(
-                  child: Image.asset(
-                    'assets/images/logo.png',
-                    width: 40,
-                    height: 40,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        decoration: const BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: LinearGradient(
-                            colors: [
-                              Color(0xFF2D1B69),
-                              Color(0xFF74E67C),
-                            ], // Primary/Green
-                          ),
-                        ),
-                        child: const Icon(
-                          Icons.explore,
-                          color: Colors.white,
-                          size: 20,
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
               Text(
-                'Round ${gameState.currentRound}/${gameState.settings.numberOfRounds}',
+                '${gameState.currentRound}/${gameState.settings.numberOfRounds}',
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),
               ),
+              const SizedBox(width: 16),
+              const Icon(Icons.settings, color: Colors.white, size: 24),
+              const SizedBox(width: 8),
+              const Icon(Icons.bar_chart, color: Colors.white, size: 24),
             ],
           ),
         ],
@@ -113,67 +100,115 @@ class _MainGameScreenState extends State<MainGameScreen> {
     );
   }
 
-  Widget _buildLandmarkImage(GameState gameState) {
-    return Container(
-      width: double.infinity,
-      height: 300,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        gradient: const LinearGradient(
-          colors: [Color(0xFF74E67C), Color(0xFFF3D42B)], // Green to Yellow
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-      child: Container(
-        margin: const EdgeInsets.all(4),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(8),
-          color: Colors.white,
-        ),
-        child: Stack(
-          children: [
-            if (gameState.currentLandmark != null)
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Image.asset(
-                  gameState.currentLandmark!.imagePath,
-                  width: double.infinity,
-                  height: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      color: Colors.grey[300],
-                      child: const Center(
-                        child: Icon(
-                          Icons.image_not_supported,
-                          size: 50,
-                          color: Colors.grey,
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            Positioned(
-              top: 8,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
+  Widget _buildLogoSection() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.start,
+      children: [
+        Container(
+          width: 240,
+          height: 240,
+          padding: EdgeInsets.all(40),
+          decoration: const BoxDecoration(shape: BoxShape.circle),
+          child: ClipOval(
+            child: Image.asset(
+              'assets/images/logo.png',
+              width: 150,
+              height: 150,
+              color: Colors.white.withAlpha(200),
+              colorBlendMode: BlendMode.modulate,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      colors: [
+                        Color(0xFF2D1B69),
+                        Color(0xFF74E67C),
+                      ], // Primary/Green
+                    ),
                   ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE63C3D), // Red
-                    borderRadius: BorderRadius.circular(4),
+                  child: const Icon(
+                    Icons.explore,
+                    color: Colors.white,
+                    size: 40,
                   ),
-                  child: const Icon(Icons.room, color: Colors.white, size: 20),
-                ),
-              ),
+                );
+              },
             ),
-          ],
+          ),
+        ),
+        const SizedBox(width: 16),
+      ],
+    );
+  }
+
+  Widget _buildLandmarkImage(GameState gameState) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 30),
+      child: AspectRatio(
+        aspectRatio: 16 / 9,
+        child: Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.3),
+                blurRadius: 10,
+                offset: const Offset(0, 5),
+              ),
+            ],
+          ),
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              // Image content
+              if (gameState.currentLandmark != null)
+                Positioned.fill(
+                  child: Container(
+                    margin: const EdgeInsets.all(
+                      20,
+                    ), // Adjust margin to fit within frame
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      color: Colors.white,
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.asset(
+                        'assets/landmarks/india.jpg',
+                        width: double.infinity,
+                        height: double.infinity,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            color: Colors.grey[300],
+                            child: const Center(
+                              child: Icon(
+                                Icons.image_not_supported,
+                                size: 50,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+              Positioned.fill(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.asset(
+                    'assets/images/frame_ar169.png',
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              ),
+              _buildLogoSection(),
+            ],
+          ),
         ),
       ),
     );
@@ -181,40 +216,60 @@ class _MainGameScreenState extends State<MainGameScreen> {
 
   Widget _buildLastQuestionsSection(GameState gameState) {
     return Container(
+      alignment: AlignmentDirectional.topStart,
+      margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF2D1B69).withOpacity(0.8), // Primary with opacity
+        color: const Color(0xFF2D1B69), // Primary purple
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: const Color(0xFF2D1B69).withOpacity(0.3),
+          width: 1,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Last Questions',
+            'LAST QUESTIONS ASKED:',
             style: TextStyle(
               color: Colors.white,
               fontSize: 18,
               fontWeight: FontWeight.bold,
+              letterSpacing: 1.0,
             ),
           ),
           const SizedBox(height: 12),
           if (gameState.questionsAsked.isEmpty)
             const Text(
               'No questions asked yet',
-              style: TextStyle(color: Colors.grey),
+              style: TextStyle(color: Colors.grey, fontSize: 16),
             )
           else
             ...gameState.questionsAsked
-                .take(3)
+                .take(2)
                 .map(
                   (question) => Padding(
                     padding: const EdgeInsets.only(bottom: 8),
                     child: Row(
                       children: [
                         Expanded(
-                          child: Text(
-                            question.text,
-                            style: const TextStyle(color: Colors.white),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.contact_support_rounded,
+                                color: Colors.white,
+                              ),
+                              SizedBox(width: 10),
+                              Text(
+                                question.text.toUpperCase(),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -225,6 +280,7 @@ class _MainGameScreenState extends State<MainGameScreen> {
                                 ? const Color(0xFF74E67C)
                                 : const Color(0xFFE63C3D), // Green/Red
                             fontWeight: FontWeight.bold,
+                            fontSize: 16,
                           ),
                         ),
                       ],
@@ -247,60 +303,66 @@ class _MainGameScreenState extends State<MainGameScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF2D1B69).withOpacity(0.8), // Primary with opacity
+        color: const Color(0xFF2D1B69), // Primary purple
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: const Color(0xFF2D1B69).withOpacity(0.3),
+          width: 1,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Leaderboard',
+            'LEADERBOARD',
             style: TextStyle(
               color: Colors.white,
-              fontSize: 18,
+              fontSize: 16,
               fontWeight: FontWeight.bold,
+              letterSpacing: 1.2,
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           ...sortedPlayers.asMap().entries.map((entry) {
             final index = entry.key;
             final player = entry.value;
+
+            // Get appropriate icon for ranking
+            IconData rankIcon;
+            Color rankColor;
+            if (index == 0) {
+              rankIcon = Icons.emoji_events; // Gold crown
+              rankColor = const Color(0xFFF3D42B);
+            } else if (index == 1) {
+              rankIcon = Icons.emoji_events; // Silver crown
+              rankColor = const Color(0xFFC0C0C0);
+            } else {
+              rankIcon = Icons.emoji_events; // Bronze medal
+              rankColor = const Color(0xFFCD7F32);
+            }
+
             return Padding(
-              padding: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.only(bottom: 12),
               child: Row(
                 children: [
-                  Container(
-                    width: 30,
-                    height: 30,
-                    decoration: BoxDecoration(
-                      color: index == 0
-                          ? const Color(0xFFF3D42B) // Yellow for first
-                          : index == 1
-                          ? const Color(0xFF74E67C) // Green for second
-                          : const Color(0xFFE63C3D), // Red for third
-                      shape: BoxShape.circle,
-                    ),
-                    child: Center(
-                      child: Text(
-                        '${index + 1}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
+                  Icon(rankIcon, color: rankColor, size: 20),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      player.name,
-                      style: const TextStyle(color: Colors.white),
+                      player.name.toUpperCase(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5,
+                      ),
                     ),
                   ),
                   Text(
                     '${player.score}',
                     style: const TextStyle(
                       color: Colors.white,
+                      fontSize: 14,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -317,19 +379,24 @@ class _MainGameScreenState extends State<MainGameScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF2D1B69).withOpacity(0.8), // Primary with opacity
+        color: const Color(0xFF2D1B69), // Primary purple
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: const Color(0xFF2D1B69).withOpacity(0.3),
+          width: 1,
+        ),
       ),
       child: Row(
         children: [
-          const Icon(Icons.person, color: Colors.white, size: 24),
-          const SizedBox(width: 12),
+          const Icon(Icons.person, color: Colors.white, size: 20),
+          const SizedBox(width: 8),
           Text(
-            'Current Player: ${gameState.currentPlayer?.name}',
+            '${(gameState.currentPlayer?.name ?? 'UNKNOWN').toUpperCase()}\'S TURN',
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 16,
+              fontSize: 14,
               fontWeight: FontWeight.bold,
+              letterSpacing: 0.5,
             ),
           ),
         ],
@@ -338,65 +405,66 @@ class _MainGameScreenState extends State<MainGameScreen> {
   }
 
   Widget _buildActionButtons(GameState gameState) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF2D1B69).withOpacity(0.8), // Primary with opacity
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        children: [
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () {
-                showDialog(
-                  context: context,
-                  builder: (context) => const QuestionDialog(),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF74E67C), // Green
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
+    return Column(
+      children: [
+        SizedBox(
+          width: double.infinity,
+          height: 50,
+          child: ElevatedButton(
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (context) => const QuestionDialog(),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF74E67C), // Green
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
               ),
-              child: const Text(
-                'ASK A QUESTION!',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
+              elevation: 2,
+            ),
+            child: const Text(
+              'ASK A QUESTION!',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 0.5,
               ),
             ),
           ),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () {
-                showDialog(
-                  context: context,
-                  builder: (context) => const GuessDialog(),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFE63C3D), // Red
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          width: double.infinity,
+          height: 50,
+          child: ElevatedButton(
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (context) => const GuessDialog(),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFE63C3D), // Red
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
               ),
-              child: const Text(
-                'GUESS!',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
+              elevation: 2,
+            ),
+            child: const Text(
+              'GUESS!',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 0.5,
               ),
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
