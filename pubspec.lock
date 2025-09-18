@@ -304,6 +304,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "6.1.5+1"
+  rainbow_edge_lighting:
+    dependency: "direct main"
+    description:
+      name: rainbow_edge_lighting
+      sha256: e58f20a5c4ab5f9e3729818cf8b6f2533928e1051e8a9abb17e6821adc2b9913
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.1.0"
   shared_preferences:
     dependency: "direct main"
     description:

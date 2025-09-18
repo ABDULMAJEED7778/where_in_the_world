@@ -4,6 +4,7 @@ import '../providers/game_provider.dart';
 import '../models/game_models.dart';
 import '../widgets/question_dialog.dart';
 import '../widgets/guess_dialog.dart';
+import 'package:rainbow_edge_lighting/rainbow_edge_lighting.dart';
 
 class MainGameScreen extends StatefulWidget {
   const MainGameScreen({super.key});
@@ -13,9 +14,11 @@ class MainGameScreen extends StatefulWidget {
 }
 
 class _MainGameScreenState extends State<MainGameScreen> {
-  late MediaQuery mediaQuery;
   @override
   Widget build(BuildContext context) {
+    double screenWidth = MediaQuery.of(context).size.width;
+    double screenHeight = MediaQuery.of(context).size.height;
+
     return Scaffold(
       backgroundColor: const Color(0xFF2D1B69), // Primary background
       body: Consumer<GameProvider>(
@@ -26,47 +29,32 @@ class _MainGameScreenState extends State<MainGameScreen> {
             return _buildGameEndScreen(gameState);
           }
 
-          return Row(
-            children: [
-              // Left Column: Logo, Photo, and Last Questions
-              Expanded(
-                flex: 2,
-                child: Column(
-                  children: [
-                    // Photo section
-                    Expanded(
-                      flex: 3,
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: _buildLandmarkImage(gameState),
-                      ),
-                    ),
-                    // Last Questions section
-                    Expanded(
-                      flex: 1,
-                      child: _buildLastQuestionsSection(gameState),
-                    ),
-                  ],
-                ),
-              ),
-              // Right Column: Leaderboard, Current Turn, and Action Buttons
-              Expanded(
-                flex: 1,
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
+          return SafeArea(
+            child: Column(
+              children: [
+                // Top Bar
+                _buildTopBar(gameState),
+                // Main Content
+                Expanded(
                   child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      _buildTopBar(gameState),
-                      _buildLeaderboard(gameState),
-                      const SizedBox(height: 16),
+                      // Image section
+                      _buildLandmarkImage(gameState, screenWidth, screenHeight),
+                      // Player turn indicator
                       _buildCurrentPlayer(gameState),
                       const SizedBox(height: 16),
+                      // Last Questions section
+                      _buildLastQuestionsSection(gameState),
+                      const SizedBox(height: 24),
+                      // Action buttons
                       _buildActionButtons(gameState),
+                      const SizedBox(height: 24),
                     ],
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           );
         },
       ),
@@ -77,22 +65,23 @@ class _MainGameScreenState extends State<MainGameScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisAlignment: MainAxisAlignment.end,
         children: [
           Row(
             children: [
-              Text(
-                '${gameState.currentRound}/${gameState.settings.numberOfRounds}',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
+              const Icon(
+                Icons.leaderboard_rounded,
+                color: Colors.white,
+                size: 24,
               ),
               const SizedBox(width: 16),
-              const Icon(Icons.settings, color: Colors.white, size: 24),
-              const SizedBox(width: 8),
-              const Icon(Icons.bar_chart, color: Colors.white, size: 24),
+              const Icon(Icons.settings_rounded, color: Colors.white, size: 24),
+              const SizedBox(width: 16),
+              const Icon(
+                Icons.help_outline_rounded,
+                color: Colors.white,
+                size: 24,
+              ),
             ],
           ),
         ],
@@ -100,115 +89,50 @@ class _MainGameScreenState extends State<MainGameScreen> {
     );
   }
 
-  Widget _buildLogoSection() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.start,
-      children: [
-        Container(
-          width: 240,
-          height: 240,
-          padding: EdgeInsets.all(40),
-          decoration: const BoxDecoration(shape: BoxShape.circle),
-          child: ClipOval(
-            child: Image.asset(
-              'assets/images/logo.png',
-              width: 150,
-              height: 150,
-              color: Colors.white.withAlpha(200),
-              colorBlendMode: BlendMode.modulate,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                return Container(
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      colors: [
-                        Color(0xFF2D1B69),
-                        Color(0xFF74E67C),
-                      ], // Primary/Green
-                    ),
-                  ),
-                  child: const Icon(
-                    Icons.explore,
-                    color: Colors.white,
-                    size: 40,
-                  ),
-                );
-              },
-            ),
+  Widget _buildLandmarkImage(
+    GameState gameState,
+    double screenWidth,
+    double screenHeight,
+  ) {
+    return Container(
+      width: screenWidth / 1.8,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.6),
+            spreadRadius: 4,
+            blurRadius: 12,
+            offset: const Offset(0, 6),
           ),
-        ),
-        const SizedBox(width: 16),
-      ],
-    );
-  }
-
-  Widget _buildLandmarkImage(GameState gameState) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 30),
+        ],
+      ),
       child: AspectRatio(
-        aspectRatio: 16 / 9,
-        child: Container(
-          width: double.infinity,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.3),
-                blurRadius: 10,
-                offset: const Offset(0, 5),
+        aspectRatio: 16 / 9, // ✅ Always keep 16:9 ratio
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            // Main Image
+            ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: Image.asset(
+                'assets/landmarks/taj_mahal.jpg',
+                fit: BoxFit.cover,
               ),
-            ],
-          ),
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              // Image content
-              if (gameState.currentLandmark != null)
-                Positioned.fill(
-                  child: Container(
-                    margin: const EdgeInsets.all(
-                      20,
-                    ), // Adjust margin to fit within frame
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      color: Colors.white,
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Image.asset(
-                        'assets/landmarks/india.jpg',
-                        width: double.infinity,
-                        height: double.infinity,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            color: Colors.grey[300],
-                            child: const Center(
-                              child: Icon(
-                                Icons.image_not_supported,
-                                size: 50,
-                                color: Colors.grey,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                ),
-              Positioned.fill(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: Image.asset(
-                    'assets/images/frame_ar169.png',
-                    fit: BoxFit.contain,
-                  ),
-                ),
+            ),
+
+            Center(
+              child: RainbowEdgeLighting(
+                glowEnabled: false, // Enable outer glow halo
+                radius: 20, // corner radius
+                thickness: 12.0, // stroke width
+                enabled: true, // fade in/out when toggled
+                speed: 0.1, // rotations per second (rps)
+                clip: false, // clip the child with the same radius
+                child: Container(),
               ),
-              _buildLogoSection(),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -216,8 +140,7 @@ class _MainGameScreenState extends State<MainGameScreen> {
 
   Widget _buildLastQuestionsSection(GameState gameState) {
     return Container(
-      alignment: AlignmentDirectional.topStart,
-      margin: const EdgeInsets.all(16),
+      margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: const Color(0xFF2D1B69), // Primary purple
@@ -253,23 +176,20 @@ class _MainGameScreenState extends State<MainGameScreen> {
                     padding: const EdgeInsets.only(bottom: 8),
                     child: Row(
                       children: [
+                        const Icon(
+                          Icons.help_outline,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 10),
                         Expanded(
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.contact_support_rounded,
-                                color: Colors.white,
-                              ),
-                              SizedBox(width: 10),
-                              Text(
-                                question.text.toUpperCase(),
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
+                          child: Text(
+                            question.text.toUpperCase(),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -293,178 +213,91 @@ class _MainGameScreenState extends State<MainGameScreen> {
     );
   }
 
-  Widget _buildLeaderboard(GameState gameState) {
-    // Create a mutable copy of the players list to sort it.
-    final sortedPlayers = gameState.players.toList();
-
-    // Sort the players by score in descending order.
-    sortedPlayers.sort((a, b) => b.score.compareTo(a.score));
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF2D1B69), // Primary purple
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: const Color(0xFF2D1B69).withOpacity(0.3),
-          width: 1,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'LEADERBOARD',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1.2,
-            ),
-          ),
-          const SizedBox(height: 16),
-          ...sortedPlayers.asMap().entries.map((entry) {
-            final index = entry.key;
-            final player = entry.value;
-
-            // Get appropriate icon for ranking
-            IconData rankIcon;
-            Color rankColor;
-            if (index == 0) {
-              rankIcon = Icons.emoji_events; // Gold crown
-              rankColor = const Color(0xFFF3D42B);
-            } else if (index == 1) {
-              rankIcon = Icons.emoji_events; // Silver crown
-              rankColor = const Color(0xFFC0C0C0);
-            } else {
-              rankIcon = Icons.emoji_events; // Bronze medal
-              rankColor = const Color(0xFFCD7F32);
-            }
-
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Row(
-                children: [
-                  Icon(rankIcon, color: rankColor, size: 20),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      player.name.toUpperCase(),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ),
-                  Text(
-                    '${player.score}',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }).toList(),
-        ],
-      ),
-    );
-  }
-
   Widget _buildCurrentPlayer(GameState gameState) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFF2D1B69), // Primary purple
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: const Color(0xFF2D1B69).withOpacity(0.3),
-          width: 1,
-        ),
+        color: const Color(0xFFF3D42B), // Dark purple background
+        borderRadius: BorderRadius.circular(8),
       ),
-      child: Row(
-        children: [
-          const Icon(Icons.person, color: Colors.white, size: 20),
-          const SizedBox(width: 8),
-          Text(
-            '${(gameState.currentPlayer?.name ?? 'UNKNOWN').toUpperCase()}\'S TURN',
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 0.5,
-            ),
-          ),
-        ],
+      child: Text(
+        '${(gameState.currentPlayer?.name ?? 'UNKNOWN').toUpperCase()}\'S TURN',
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+          letterSpacing: 1.0,
+        ),
+        textAlign: TextAlign.center,
       ),
     );
   }
 
   Widget _buildActionButtons(GameState gameState) {
-    return Column(
-      children: [
-        SizedBox(
-          width: double.infinity,
-          height: 50,
-          child: ElevatedButton(
-            onPressed: () {
-              showDialog(
-                context: context,
-                builder: (context) => const QuestionDialog(),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF74E67C), // Green
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        children: [
+          SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: ElevatedButton(
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (context) => const QuestionDialog(),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF74E67C), // Green
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                elevation: 2,
               ),
-              elevation: 2,
-            ),
-            child: const Text(
-              'ASK A QUESTION!',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 0.5,
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        SizedBox(
-          width: double.infinity,
-          height: 50,
-          child: ElevatedButton(
-            onPressed: () {
-              showDialog(
-                context: context,
-                builder: (context) => const GuessDialog(),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFE63C3D), // Red
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-              elevation: 2,
-            ),
-            child: const Text(
-              'GUESS!',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 0.5,
+              child: const Text(
+                'ASK A QUESTION!',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
+                ),
               ),
             ),
           ),
-        ),
-      ],
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: ElevatedButton(
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (context) => const GuessDialog(),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFE63C3D), // Red
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                elevation: 2,
+              ),
+              child: const Text(
+                'GUESS!',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
