@@ -11,6 +11,7 @@ A geography quiz party game built with Flutter where players guess countries fro
 - **Multiplayer Support**: 2-8 players can play together
 - **Multiple Difficulty Levels**: Easy, Moderate, and Difficult
 - **Customizable Rounds**: Set the number of rounds and questions per player
+- **AI-Powered Answers**: Uses Google AI (Gemini) to answer yes/no questions about landmarks
 - **Real-time Leaderboard**: Track scores throughout the game
 - **Question History**: View previously asked questions and answers
 - **Beautiful UI**: Modern design with smooth animations
@@ -19,7 +20,7 @@ A geography quiz party game built with Flutter where players guess countries fro
 
 1. **Setup**: Choose game mode, difficulty, and number of rounds
 2. **Add Players**: Add 2-8 players to the game
-3. **Ask Questions**: Each player can ask up to 2 yes/no questions per round
+3. **Ask Questions**: Each player can ask up to 2 yes/no questions per round. The AI will answer based on the landmark information.
 4. **Make Guesses**: Players can guess the country at any time
 5. **Scoring**: Correct guesses earn 10 points, nearest guesses earn 5 points
 6. **Win**: The player with the highest score after all rounds wins!
@@ -48,6 +49,37 @@ A geography quiz party game built with Flutter where players guess countries fro
    flutter pub get
    ```
 
+### Google AI API Setup
+
+The game uses Google AI (Gemini) to answer questions about landmarks. You need to set up an API key:
+
+1. **Get a Google AI API Key**:
+   - Go to [Google AI Studio](https://makersuite.google.com/app/apikey)
+   - Sign in with your Google account
+   - Click "Create API Key"
+   - Copy your API key
+
+2. **Configure the API Key** (choose one method):
+
+   **Method 1: Environment Variable (Recommended)**
+   ```bash
+   # Windows PowerShell
+   $env:GOOGLE_AI_API_KEY="your-api-key-here"
+   
+   # Linux/Mac
+   export GOOGLE_AI_API_KEY="your-api-key-here"
+   ```
+
+   **Method 2: Programmatically**
+   ```dart
+   // In your app initialization
+   context.read<GameProvider>().updateAIApiKey('your-api-key-here');
+   ```
+
+   **Method 3: Update config file**
+   - Edit `lib/config/api_config.dart` and replace `YOUR_API_KEY_HERE` with your actual API key
+   - ⚠️ **Not recommended for production** - this exposes your key in code
+
 ### Running the App
 
 For web development:
@@ -64,9 +96,11 @@ flutter run -d android
 
 ```
 lib/
+├── config/          # Configuration (API keys, etc.)
 ├── models/          # Data models (Player, Question, Landmark, etc.)
 ├── providers/       # State management (GameProvider)
 ├── screens/         # UI screens (Launching, Lobby, Main Game)
+├── services/        # Services (AI service for Google AI integration)
 ├── widgets/         # Reusable UI components
 └── main.dart        # App entry point
 
@@ -80,6 +114,7 @@ assets/
 - **Flutter**: Cross-platform UI framework
 - **Provider**: State management
 - **Material Design 3**: Modern UI components
+- **Google AI (Gemini)**: AI-powered question answering
 - **Custom Animations**: Smooth transitions and effects
 
 ## Future Enhancements

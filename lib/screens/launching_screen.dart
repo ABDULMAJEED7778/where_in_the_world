@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'game_lobby_screen.dart';
+import '../services/audio_service.dart';
+import '../utils/responsive.dart';
+import 'mode_selection_screen.dart';
 
 class LaunchingScreen extends StatefulWidget {
   const LaunchingScreen({super.key});
@@ -14,6 +16,7 @@ class _LaunchingScreenState extends State<LaunchingScreen>
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
+  bool _showStartButton = false;
 
   @override
   void initState() {
@@ -33,12 +36,14 @@ class _LaunchingScreenState extends State<LaunchingScreen>
 
     _animationController.forward();
 
-    // Navigate to game lobby after animation
-    Future.delayed(const Duration(seconds: 3), () {
-      if (mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const GameLobbyScreen()),
-        );
+    // Show start button after animation completes
+    _animationController.addStatusListener((status) {
+      if (status == AnimationStatus.completed) {
+        if (mounted) {
+          setState(() {
+            _showStartButton = true;
+          });
+        }
       }
     });
   }
@@ -49,53 +54,146 @@ class _LaunchingScreenState extends State<LaunchingScreen>
     super.dispose();
   }
 
+  void _startGame() {
+    // Start lobby music (this works now because it's triggered by user interaction)
+    AudioService().playLobbyMusic();
+
+    // Navigate to mode selection screen
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (context) => const ModeSelectionScreen()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    // Responsive values
+    final logoSize = Responsive.value<double>(
+      context,
+      phone: 200,
+      tablet: 250,
+      laptop: 280,
+      desktop: 320,
+    );
+
+    final buttonFontSize = Responsive.value<double>(
+      context,
+      phone: 20,
+      tablet: 24,
+      laptop: 28,
+      desktop: 32,
+    );
+
+    final buttonPaddingH = Responsive.value<double>(
+      context,
+      phone: 36,
+      tablet: 48,
+      laptop: 56,
+      desktop: 64,
+    );
+
+    final buttonPaddingV = Responsive.value<double>(
+      context,
+      phone: 12,
+      tablet: 16,
+      laptop: 18,
+      desktop: 20,
+    );
+
+    final spacing = Responsive.value<double>(
+      context,
+      phone: 40,
+      tablet: 48,
+      laptop: 56,
+      desktop: 64,
+    );
+
     return Scaffold(
       backgroundColor: const Color(0xFF2D1B69), // Primary background
       body: Center(
-        child: AnimatedBuilder(
-          animation: _animationController,
-          builder: (context, child) {
-            return FadeTransition(
-              opacity: _fadeAnimation,
-              child: ScaleTransition(
-                scale: _scaleAnimation,
-                child: _buildLogo(),
-              ),
-            );
-          },
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            AnimatedBuilder(
+              animation: _animationController,
+              builder: (context, child) {
+                return FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: ScaleTransition(
+                    scale: _scaleAnimation,
+                    child: _buildLogo(logoSize),
+                  ),
+                );
+              },
+            ),
+            SizedBox(height: spacing),
+            // Start Button
+            AnimatedOpacity(
+              opacity: _showStartButton ? 1.0 : 0.0,
+              duration: const Duration(milliseconds: 500),
+              child: _showStartButton
+                  ? ElevatedButton(
+                      onPressed: _startGame,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF74E67C), // Green
+                        foregroundColor: const Color(0xFF2D1B69), // Dark Purple
+                        padding: EdgeInsets.symmetric(
+                          horizontal: buttonPaddingH,
+                          vertical: buttonPaddingV,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        elevation: 8,
+                      ),
+                      child: Text(
+                        'START GAME',
+                        style: GoogleFonts.hanaleiFill(
+                          fontSize: buttonFontSize,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 2,
+                        ),
+                      ),
+                    )
+                  : SizedBox(
+                      height: buttonPaddingV * 2 + buttonFontSize,
+                      width: buttonPaddingH * 2 + 150,
+                    ), // Placeholder to prevent layout jump
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildLogo() {
+  Widget _buildLogo(double size) {
+    // Scale internal elements based on logo size
+    final scale = size / 250; // 250 is the base size
+
     return Container(
-      width: 250,
-      height: 250,
+      width: size,
+      height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
+            blurRadius: 20 * scale,
+            offset: Offset(0, 10 * scale),
           ),
         ],
       ),
       child: ClipOval(
         child: Image.asset(
           'assets/images/logo.png',
-          width: 250,
-          height: 250,
+          width: size,
+          height: size,
           fit: BoxFit.cover,
           errorBuilder: (context, error, stackTrace) {
             // Fallback to the original design if image fails to load
             return Container(
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: const LinearGradient(
+                gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
@@ -111,17 +209,17 @@ class _LaunchingScreenState extends State<LaunchingScreen>
                     'WHERE',
                     style: GoogleFonts.hanaleiFill(
                       color: const Color(0xFFF3D42B), // Yellow
-                      fontSize: 24,
+                      fontSize: 24 * scale,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 2,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  SizedBox(height: 4 * scale),
                   Text(
                     'IN',
                     style: GoogleFonts.hanaleiFill(
                       color: Colors.white,
-                      fontSize: 16,
+                      fontSize: 16 * scale,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -129,11 +227,11 @@ class _LaunchingScreenState extends State<LaunchingScreen>
                     'THE',
                     style: GoogleFonts.hanaleiFill(
                       color: Colors.white,
-                      fontSize: 16,
+                      fontSize: 16 * scale,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  SizedBox(height: 4 * scale),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -141,7 +239,7 @@ class _LaunchingScreenState extends State<LaunchingScreen>
                         'WORLD',
                         style: GoogleFonts.hanaleiFill(
                           color: const Color(0xFFF3D42B), // Yellow
-                          fontSize: 24,
+                          fontSize: 24 * scale,
                           fontWeight: FontWeight.bold,
                           letterSpacing: 2,
                         ),
@@ -150,24 +248,24 @@ class _LaunchingScreenState extends State<LaunchingScreen>
                         '?',
                         style: GoogleFonts.hanaleiFill(
                           color: const Color(0xFFE63C3D), // Red
-                          fontSize: 24,
+                          fontSize: 24 * scale,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
+                  SizedBox(height: 8 * scale),
                   Container(
-                    width: 20,
-                    height: 20,
+                    width: 20 * scale,
+                    height: 20 * scale,
                     decoration: const BoxDecoration(
                       color: Color(0xFF74E67C), // Green
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.explore,
                       color: Colors.white,
-                      size: 12,
+                      size: 12 * scale,
                     ),
                   ),
                 ],

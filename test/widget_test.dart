@@ -20,7 +20,7 @@ void main() {
 
     // Test game settings
     final settings = GameSettings(
-      gameMode: GameMode.multiplayer,
+      gameMode: GameMode.partyMode,
       difficulty: Difficulty.easy,
       numberOfRounds: 5,
       questionsPerPlayer: 2,

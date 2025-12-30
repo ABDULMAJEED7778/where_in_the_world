@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "130322748952",
+    "project_id": "whereintheworld-133f0",
+    "storage_bucket": "whereintheworld-133f0.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:130322748952:android:929e8638f4b70168a3156d",
+        "android_client_info": {
+          "package_name": "com.example.where_in_the_world"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBjxNPUFLXamTGCNm9yCVVYKmOd8j6h6ks"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

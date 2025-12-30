@@ -5,7 +5,7 @@ publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.8.1
+  sdk: ^3.9.0
 
 dependencies:
   flutter:
@@ -17,6 +17,17 @@ dependencies:
   google_fonts: ^6.2.1
   flutter_svg: ^2.0.10+1
   rainbow_edge_lighting: ^1.1.0
+  lottie: ^3.3.2
+  google_generative_ai: ^0.4.3
+  flutter_dotenv: ^5.1.0
+  audioplayers: ^5.2.1
+  # Firebase for online multiplayer
+  firebase_core: ^3.8.1
+  firebase_database: ^11.2.1
+  # Sharing and deep links
+  share_plus: ^10.1.4
+  app_links: ^6.4.0
+  uuid: ^4.5.1
 
 dev_dependencies:
   flutter_test:
@@ -30,3 +41,12 @@ flutter:
     - assets/images/
     - assets/images/logo.png
     - assets/landmarks/
+    - assets/lotties/
+    - assets/.env
+    - .env
+    - assets/sounds/music/
+    - assets/sounds/effects/game_flow/
+    - assets/sounds/effects/gameplay/
+    - assets/sounds/effects/questions/
+    - assets/sounds/effects/ui/
+    - lib/data/photos_data.json
