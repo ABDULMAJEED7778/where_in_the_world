@@ -28,7 +28,7 @@ where_in_the_world/
 Create a file named `.env` (no extension) with this content:
 
 ```
-GOOGLE_AI_API_KEY=AIzaSyYourActualApiKeyHere123456789
+GOOGLE_AI_API_KEY=your-actual-api-key-here
 ```
 
 **Important Notes:**
