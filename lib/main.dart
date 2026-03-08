@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -13,26 +12,6 @@ import 'screens/online_lobby_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Load .env file (for web, it needs to be in assets)
-  try {
-    // For web, try assets/.env first (works for web and mobile)
-    await dotenv.load(fileName: "assets/.env");
-    print('✓ .env file loaded successfully from assets/.env');
-  } catch (e) {
-    // If that fails, try root .env (works for desktop/mobile)
-    try {
-      await dotenv.load(fileName: ".env");
-      print('✓ .env file loaded successfully from root');
-    } catch (e2) {
-      print('⚠ Warning: Could not load .env file');
-      print('⚠ Error from assets/.env: $e');
-      print('⚠ Error from .env: $e2');
-      print(
-        '⚠ Continuing without .env file. You can set API key via environment variable or programmatically.',
-      );
-    }
-  }
 
   // Preload photos data on app startup
   try {
