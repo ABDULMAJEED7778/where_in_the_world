@@ -12,8 +12,7 @@ import 'dart:io';
 class APIConfig {
   // Fallback API key for local development only
   // In CI/production, always use --dart-define=GOOGLE_AI_API_KEY=your-key
-  static const String _defaultApiKey =
-      'AIzaSyBtBCHB2irTBmFmCjg49SpH910EfHkjpS0';
+  static const String _defaultApiKey = 'YOUR_API_KEY_HERE';
 
   /// Get the API key from compile-time define, environment variable, or default
   static String getApiKey() {
