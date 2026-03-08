@@ -96,3 +96,65 @@ workflows:
     
     artifacts:
       - build/ios/iphoneos/*.app
+
+  android-release:
+    name: Android Release Build
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    
+    environment:
+      flutter: stable
+      groups:
+        - app_secrets
+    
+    scripts:
+      - name: Create .env files
+        script: |
+          echo "GOOGLE_AI_API_KEY=$GOOGLE_AI_API_KEY" > .env
+          echo "GOOGLE_AI_API_KEY=$GOOGLE_AI_API_KEY" > assets/.env
+      
+      - name: Install dependencies
+        script: flutter pub get
+      
+      - name: Build Android APK
+        script: flutter build apk --release
+      
+      - name: Build Android App Bundle
+        script: flutter build appbundle --release
+    
+    artifacts:
+      - build/app/outputs/flutter-apk/*.apk
+      - build/app/outputs/bundle/release/*.aab
+    
+    publishing:
+      email:
+        recipients:
+          - your-email@example.com  # TODO: Replace with your email
+        notify:
+          success: true
+          failure: true
+
+  android-debug:
+    name: Android Debug Build (Testing)
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    
+    environment:
+      flutter: stable
+      groups:
+        - app_secrets
+    
+    scripts:
+      - name: Create .env files
+        script: |
+          echo "GOOGLE_AI_API_KEY=$GOOGLE_AI_API_KEY" > .env
+          echo "GOOGLE_AI_API_KEY=$GOOGLE_AI_API_KEY" > assets/.env
+      
+      - name: Install dependencies
+        script: flutter pub get
+      
+      - name: Build Android Debug
+        script: flutter build apk --debug
+    
+    artifacts:
+      - build/app/outputs/flutter-apk/*.apk
