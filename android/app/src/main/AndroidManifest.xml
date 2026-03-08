@@ -1,6 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
-        android:label="where_in_the_world"
+        android:label="Where In The World"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

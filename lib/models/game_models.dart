@@ -50,12 +50,16 @@ class GameSettings {
   final Difficulty difficulty;
   final int numberOfRounds;
   final int questionsPerPlayer;
+  final int turnDurationSeconds;
+  final bool isTimerEnabled;
 
   GameSettings({
     required this.gameMode,
     required this.difficulty,
     required this.numberOfRounds,
     required this.questionsPerPlayer,
+    this.turnDurationSeconds = 60,
+    this.isTimerEnabled = true,
   });
 }
 
@@ -136,4 +140,10 @@ class GameState {
 
 enum GameStatus { playing, roundOver }
 
-enum GameEvent { correctGuess, incorrectGuess, roundTransition, gameEnd }
+enum GameEvent {
+  correctGuess,
+  incorrectGuess,
+  roundTransition,
+  gameEnd,
+  turnTimeout,
+}

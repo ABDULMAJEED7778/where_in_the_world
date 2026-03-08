@@ -40,156 +40,242 @@ class _QuestionDialogState extends State<QuestionDialog> {
   @override
   Widget build(BuildContext context) {
     final currentPlayer = context.watch<GameProvider>().gameState.currentPlayer;
+    final screenWidth = MediaQuery.of(context).size.width;
 
-    return AlertDialog(
-      backgroundColor: const Color(
-        0xFF2D1B69,
-      ).withOpacity(0.9), // Primary with opacity
-      title: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          const Text(
-            'Ask a Question',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: const Color.fromARGB(255, 255, 240, 0),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.black, width: 2),
-            ),
-            child: Stack(
-              alignment: Alignment.center,
+    // Dynamic responsive values based on screen width
+    // Dialog width: 92% on small screens, max 500px on large screens
+    final dialogWidth = (screenWidth * 0.85).clamp(280.0, 500.0);
+
+    // Font sizes scale with screen width
+    final titleFontSize = (screenWidth * 0.045).clamp(16.0, 22.0);
+    final bodyFontSize = (screenWidth * 0.035).clamp(12.0, 16.0);
+    final hintFontSize = (screenWidth * 0.028).clamp(10.0, 14.0);
+
+    // Padding and spacing scale with screen width
+    final padding = (screenWidth * 0.04).clamp(14.0, 24.0);
+    final borderRadius = (screenWidth * 0.03).clamp(10.0, 20.0);
+
+    // Button sizing
+    final buttonHeight = (screenWidth * 0.1).clamp(36.0, 48.0);
+    final playerBadgePadding = (screenWidth * 0.02).clamp(6.0, 12.0);
+
+    return Dialog(
+      backgroundColor: const Color(0xFF2D1B69).withOpacity(0.95),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(borderRadius),
+      ),
+      child: Container(
+        width: dialogWidth,
+        padding: EdgeInsets.all(padding),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Title row
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Text(
-                  currentPlayer?.name.toUpperCase() ?? 'PLAYER',
+                  'Ask a Question',
                   style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                    letterSpacing: 1.0,
-                    foreground: Paint()
-                      ..style = PaintingStyle.stroke
-                      ..strokeWidth = 1.5
-                      ..color = Colors.black,
-                  ),
-                ),
-                Text(
-                  currentPlayer?.name.toUpperCase() ?? 'PLAYER',
-                  style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                    letterSpacing: 1.0,
+                    fontSize: titleFontSize,
+                  ),
+                ),
+                Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: playerBadgePadding * 1.5,
+                    vertical: playerBadgePadding * 0.75,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color.fromARGB(255, 255, 240, 0),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.black, width: 2),
+                  ),
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Text(
+                        currentPlayer?.name.toUpperCase() ?? 'PLAYER',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: hintFontSize,
+                          letterSpacing: 1.0,
+                          foreground: Paint()
+                            ..style = PaintingStyle.stroke
+                            ..strokeWidth = 1.5
+                            ..color = Colors.black,
+                        ),
+                      ),
+                      Text(
+                        currentPlayer?.name.toUpperCase() ?? 'PLAYER',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: hintFontSize,
+                          letterSpacing: 1.0,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
-          ),
-        ],
-      ),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TextField(
-            controller: _questionController,
-            style: const TextStyle(color: Colors.white),
-            decoration: const InputDecoration(
-              hintText: 'Enter your yes/no question...',
-              hintStyle: TextStyle(color: Colors.white70),
-              border: OutlineInputBorder(),
-              enabledBorder: OutlineInputBorder(
-                borderSide: BorderSide(color: Colors.white),
+
+            SizedBox(height: padding),
+
+            // Question input
+            TextField(
+              controller: _questionController,
+              style: TextStyle(color: Colors.white, fontSize: bodyFontSize),
+              decoration: InputDecoration(
+                hintText: 'Enter your yes/no question...',
+                hintStyle: TextStyle(
+                  color: Colors.white70,
+                  fontSize: bodyFontSize * 0.9,
+                ),
+                contentPadding: EdgeInsets.all(padding * 0.75),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(borderRadius * 0.5),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(borderRadius * 0.5),
+                  borderSide: const BorderSide(color: Colors.white54),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(borderRadius * 0.5),
+                  borderSide: const BorderSide(color: Colors.white, width: 2),
+                ),
               ),
-              focusedBorder: OutlineInputBorder(
-                borderSide: BorderSide(color: Colors.white),
-              ),
+              cursorColor: Colors.white,
+              cursorWidth: 2,
+              maxLines: 3,
             ),
-            cursorColor: Colors.white,
-            cursorWidth: 2,
-            maxLines: 3,
-          ),
-          if (_isLoading) ...[
-            const SizedBox(height: 20),
-            const Center(
-              child: Column(
-                children: [
-                  CircularProgressIndicator(color: Colors.white),
-                  SizedBox(height: 16),
-                  Text(
-                    'AI is thinking...',
-                    style: TextStyle(color: Colors.white70, fontSize: 14),
-                  ),
-                ],
+
+            // Loading indicator
+            if (_isLoading) ...[
+              SizedBox(height: padding),
+              Center(
+                child: Column(
+                  children: [
+                    const CircularProgressIndicator(color: Colors.white),
+                    SizedBox(height: padding * 0.75),
+                    Text(
+                      'AI is thinking...',
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: hintFontSize,
+                      ),
+                    ),
+                  ],
+                ),
               ),
+            ],
+
+            // Error message
+            if (_errorMessage != null) ...[
+              SizedBox(height: padding),
+              Container(
+                padding: EdgeInsets.all(padding * 0.75),
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.red, width: 1),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.error_outline,
+                      color: Colors.red,
+                      size: bodyFontSize * 1.3,
+                    ),
+                    SizedBox(width: padding * 0.5),
+                    Expanded(
+                      child: Text(
+                        _errorMessage!,
+                        style: TextStyle(
+                          color: Colors.red,
+                          fontSize: hintFontSize,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
+            SizedBox(height: padding * 0.75),
+
+            // Helper text
+            Text(
+              'The AI will answer your question about the COUNTRY where this landmark is located.',
+              style: TextStyle(color: Colors.white70, fontSize: hintFontSize),
+              textAlign: TextAlign.left,
             ),
-          ],
-          if (_errorMessage != null) ...[
-            const SizedBox(height: 20),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.red, width: 1),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.error_outline, color: Colors.red, size: 20),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      _errorMessage!,
-                      style: const TextStyle(color: Colors.red, fontSize: 12),
+
+            SizedBox(height: padding),
+
+            // Action buttons
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: TextButton.styleFrom(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: padding,
+                      vertical: padding * 0.5,
                     ),
                   ),
-                ],
-              ),
-            ),
-          ],
-          const SizedBox(height: 10),
-          const Text(
-            'The AI will answer your question about the COUNTRY where this landmark is located.',
-            style: TextStyle(color: Colors.white70, fontSize: 12),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
-        ),
-        ElevatedButton(
-          onPressed: (_canSubmitQuestion && !_isLoading)
-              ? _submitQuestion
-              : null,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF74E67C), // Green
-            disabledBackgroundColor: Colors.grey.withOpacity(0.5),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-          child: _isLoading
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
-                )
-              : const Text(
-                  'Ask AI',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
+                  child: Text(
+                    'Cancel',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: bodyFontSize,
+                    ),
                   ),
                 ),
+                SizedBox(width: padding * 0.5),
+                SizedBox(
+                  height: buttonHeight,
+                  child: ElevatedButton(
+                    onPressed: (_canSubmitQuestion && !_isLoading)
+                        ? _submitQuestion
+                        : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF74E67C),
+                      disabledBackgroundColor: Colors.grey.withOpacity(0.5),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(borderRadius * 0.5),
+                      ),
+                      padding: EdgeInsets.symmetric(horizontal: padding),
+                    ),
+                    child: _isLoading
+                        ? SizedBox(
+                            width: bodyFontSize * 1.3,
+                            height: bodyFontSize * 1.3,
+                            child: const CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : Text(
+                            'Ask AI',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: bodyFontSize,
+                            ),
+                          ),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 

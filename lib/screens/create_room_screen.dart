@@ -31,6 +31,8 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
   int _selectedRounds = 6;
   int _selectedDifficulty = 1;
   int _questionsPerTurn = 2;
+  bool _isTimerEnabled = true;
+  int _timerDuration = 60;
 
   @override
   void initState() {
@@ -55,6 +57,9 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
         password: _usePassword ? _passwordController.text : null,
         totalRounds: _selectedRounds,
         difficulty: _selectedDifficulty,
+        questionsPerTurn: _questionsPerTurn,
+        isTimerEnabled: _isTimerEnabled,
+        timerDuration: _timerDuration,
       );
 
       print('✅ Room created successfully! Code: $code');
@@ -194,6 +199,37 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final aspectRatio = screenWidth / screenHeight;
+
+    // Reduce spacing on short/wide screens
+    final isShortScreen = screenHeight < 700 || aspectRatio >= 1.0;
+    final spacingMultiplier = isShortScreen ? 0.6 : 1.0;
+
+    // Compact mode for screens with aspect ratio >= 5:6 (0.83) and height < 800px
+    final isCompactScreen = aspectRatio >= 0.83 && screenHeight < 800;
+    final compactMultiplier = isCompactScreen ? 0.8 : 1.0;
+
+    // Dynamic responsive values (scaled down in compact mode)
+    final padding = ((screenWidth * 0.05) * compactMultiplier).clamp(
+      12.0,
+      32.0,
+    );
+    final titleFontSize = ((screenWidth * 0.06) * compactMultiplier).clamp(
+      18.0,
+      32.0,
+    );
+    final cardPadding = ((screenWidth * 0.05) * compactMultiplier).clamp(
+      12.0,
+      24.0,
+    );
+    final spacing =
+        ((screenHeight * 0.03) * spacingMultiplier * compactMultiplier).clamp(
+          8.0,
+          24.0,
+        );
+
     return WillPopScope(
       onWillPop: () async {
         await _leaveRoom();
@@ -207,11 +243,16 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
             SafeArea(
               child: Column(
                 children: [
-                  _buildHeader(),
+                  _buildHeader(screenWidth, titleFontSize),
                   Expanded(
                     child: _isCreating
-                        ? _buildLoadingState()
-                        : _buildRoomContent(),
+                        ? _buildLoadingState(screenWidth)
+                        : _buildRoomContent(
+                            screenWidth,
+                            padding,
+                            cardPadding,
+                            spacing,
+                          ),
                   ),
                 ],
               ),
@@ -222,71 +263,176 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(double screenWidth, double fontSize) {
+    final padding = (screenWidth * 0.04).clamp(12.0, 24.0);
+    final iconSize = (screenWidth * 0.06).clamp(20.0, 28.0);
+
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(padding),
       child: Row(
         children: [
           IconButton(
             onPressed: _leaveRoom,
-            icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+            icon: Icon(
+              Icons.arrow_back_ios,
+              color: Colors.white,
+              size: iconSize,
+            ),
           ),
           Expanded(
             child: Text(
               'YOUR ROOM',
               textAlign: TextAlign.center,
-              style: GoogleFonts.hanaleiFill(fontSize: 24, color: Colors.white),
+              style: GoogleFonts.hanaleiFill(
+                fontSize: fontSize,
+                color: Colors.white,
+              ),
             ),
           ),
-          const SizedBox(width: 48),
+          SizedBox(width: iconSize + 16), // Balance the back button
         ],
       ),
     );
   }
 
-  Widget _buildLoadingState() {
+  Widget _buildLoadingState(double screenWidth) {
+    final spinnerSize = (screenWidth * 0.1).clamp(30.0, 50.0);
+    final fontSize = (screenWidth * 0.045).clamp(16.0, 24.0);
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const CircularProgressIndicator(color: Color(0xFF74E67C)),
+          SizedBox(
+            width: spinnerSize,
+            height: spinnerSize,
+            child: const CircularProgressIndicator(color: Color(0xFF74E67C)),
+          ),
           const SizedBox(height: 20),
           Text(
             'Creating room...',
-            style: GoogleFonts.hanaleiFill(color: Colors.white70),
+            style: GoogleFonts.hanaleiFill(
+              color: Colors.white70,
+              fontSize: fontSize,
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildRoomContent() {
+  Widget _buildRoomContent(
+    double screenWidth,
+    double padding,
+    double cardPadding,
+    double spacing,
+  ) {
+    // Check if we should use wide layout (Tablet/Desktop)
+    final isWideScreen = screenWidth > 800;
+
+    if (isWideScreen) {
+      return _buildWideLayout(screenWidth, padding, cardPadding, spacing);
+    }
+
+    return _buildMobileLayout(screenWidth, padding, cardPadding, spacing);
+  }
+
+  Widget _buildMobileLayout(
+    double screenWidth,
+    double padding,
+    double cardPadding,
+    double spacing,
+  ) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(padding),
       child: Column(
         children: [
           // Room Code Card
-          _buildRoomCodeCard(),
-          const SizedBox(height: 24),
+          _buildRoomCodeCard(screenWidth, cardPadding),
+          SizedBox(height: spacing),
 
           // Game Settings Card
-          _buildGameSettingsCard(),
-          const SizedBox(height: 24),
+          _buildGameSettingsCard(screenWidth, cardPadding, spacing),
+          SizedBox(height: spacing),
 
           // Players List
-          _buildPlayersCard(),
-          const SizedBox(height: 24),
+          _buildPlayersCard(screenWidth, cardPadding),
+          SizedBox(height: spacing),
 
           // Start Game Button
-          _buildStartButton(),
+          _buildStartButton(screenWidth),
         ],
       ),
     );
   }
 
-  Widget _buildRoomCodeCard() {
+  Widget _buildWideLayout(
+    double screenWidth,
+    double padding,
+    double cardPadding,
+    double spacing,
+  ) {
+    // Max constraints for content area - creates white space on very wide/tall screens
+    const double maxContentWidth = 1200.0;
+    const double maxContentHeight = 700.0;
+
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(
+          maxWidth: maxContentWidth,
+          maxHeight: maxContentHeight,
+        ),
+        child: Padding(
+          padding: EdgeInsets.all(padding),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Left Column: Room Code & Settings
+              Expanded(
+                flex: 4,
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      _buildRoomCodeCard(screenWidth, cardPadding),
+                      SizedBox(height: spacing),
+                      _buildGameSettingsCard(screenWidth, cardPadding, spacing),
+                    ],
+                  ),
+                ),
+              ),
+              SizedBox(width: spacing),
+
+              // Right Column: Players List (Expanded) & Start Button
+              Expanded(
+                flex: 5,
+                child: Column(
+                  children: [
+                    Expanded(
+                      child: _buildPlayersCard(
+                        screenWidth,
+                        cardPadding,
+                        expandHeight: true,
+                      ),
+                    ),
+                    SizedBox(height: spacing),
+                    _buildStartButton(screenWidth),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRoomCodeCard(double screenWidth, double padding) {
+    final titleFontSize = (screenWidth * 0.035).clamp(10.0, 14.0);
+    final codeFontSize = (screenWidth * 0.10).clamp(28.0, 56.0);
+    final letterSpacing = (screenWidth * 0.02).clamp(4.0, 10.0);
+
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(padding),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
@@ -307,37 +453,39 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
           Text(
             'ROOM CODE',
             style: GoogleFonts.hanaleiFill(
-              fontSize: 12,
+              fontSize: titleFontSize,
               fontWeight: FontWeight.w600,
               color: Colors.white70,
               letterSpacing: 2,
             ),
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: padding * 0.5),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
                 _roomCode ?? '------',
                 style: GoogleFonts.hanaleiFill(
-                  fontSize: 48,
+                  fontSize: codeFontSize,
                   color: const Color(0xFF74E67C),
-                  letterSpacing: 8,
+                  letterSpacing: letterSpacing,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: padding * 0.6),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               _buildActionChip(
+                screenWidth: screenWidth,
                 icon: Icons.copy,
                 label: 'Copy',
                 onTap: _copyRoomCode,
               ),
               const SizedBox(width: 12),
               _buildActionChip(
+                screenWidth: screenWidth,
                 icon: Icons.share,
                 label: 'Share',
                 onTap: _shareRoom,
@@ -349,9 +497,17 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
     );
   }
 
-  Widget _buildGameSettingsCard() {
+  Widget _buildGameSettingsCard(
+    double screenWidth,
+    double padding,
+    double spacing,
+  ) {
+    final titleFontSize = (screenWidth * 0.04).clamp(12.0, 16.0);
+    final subTitleFontSize = (screenWidth * 0.03).clamp(10.0, 14.0);
+    final iconSize = (screenWidth * 0.05).clamp(18.0, 24.0);
+
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(padding),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.1),
         borderRadius: BorderRadius.circular(20),
@@ -362,12 +518,12 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
         children: [
           Row(
             children: [
-              const Icon(Icons.tune, color: Colors.white70),
+              Icon(Icons.tune, color: Colors.white70, size: iconSize),
               const SizedBox(width: 8),
               Text(
                 'GAME SETTINGS',
                 style: GoogleFonts.hanaleiFill(
-                  fontSize: 14,
+                  fontSize: titleFontSize,
                   fontWeight: FontWeight.w600,
                   color: Colors.white70,
                   letterSpacing: 1,
@@ -375,13 +531,13 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: spacing),
 
           // Difficulty Row
           Text(
             'DIFFICULTY',
             style: GoogleFonts.hanaleiFill(
-              fontSize: 12,
+              fontSize: subTitleFontSize,
               fontWeight: FontWeight.w500,
               color: Colors.white54,
             ),
@@ -394,6 +550,7 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
                   'EASY',
                   1,
                   const Color(0xFF74E67C),
+                  screenWidth,
                 ),
               ),
               const SizedBox(width: 8),
@@ -402,6 +559,7 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
                   'MODERATE',
                   2,
                   const Color(0xFFF3D42B),
+                  screenWidth,
                 ),
               ),
               const SizedBox(width: 8),
@@ -410,11 +568,12 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
                   'HARD',
                   3,
                   const Color(0xFFE63C3D),
+                  screenWidth,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: spacing),
 
           // Rounds and Questions Row
           Row(
@@ -426,6 +585,7 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
                   min: 2,
                   max: 10,
                   onChanged: (v) => setState(() => _selectedRounds = v),
+                  screenWidth: screenWidth,
                 ),
               ),
               const SizedBox(width: 16),
@@ -436,7 +596,51 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
                   min: 2,
                   max: 5,
                   onChanged: (v) => setState(() => _questionsPerTurn = v),
+                  screenWidth: screenWidth,
                 ),
+              ),
+            ],
+          ),
+          SizedBox(height: spacing),
+
+          // Timer Options Row
+          Row(
+            children: [
+              Expanded(child: _buildTimerEnabledToggle(screenWidth)),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _isTimerEnabled
+                    ? _buildNumberSetting(
+                        label: 'TIMER (SEC)',
+                        value: _timerDuration,
+                        min: 30,
+                        max: 180,
+                        onChanged: (v) {
+                          // Snap to common values
+                          int snapped = v;
+                          if (v % 15 != 0 && v > _timerDuration) {
+                            snapped =
+                                _timerDuration + 15 - (_timerDuration % 15);
+                          } else if (v % 15 != 0 && v < _timerDuration) {
+                            snapped = _timerDuration - (_timerDuration % 15);
+                          }
+                          setState(
+                            () => _timerDuration = snapped.clamp(30, 180),
+                          );
+                        },
+                        screenWidth: screenWidth,
+                      )
+                    : Opacity(
+                        opacity: 0.5,
+                        child: _buildNumberSetting(
+                          label: 'TIMER (SEC)',
+                          value: _timerDuration,
+                          min: 30,
+                          max: 180,
+                          onChanged: (_) {},
+                          screenWidth: screenWidth,
+                        ),
+                      ),
               ),
             ],
           ),
@@ -445,8 +649,78 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
     );
   }
 
-  Widget _buildDifficultyButton(String label, int difficulty, Color color) {
+  Widget _buildTimerEnabledToggle(double screenWidth) {
+    final labelFontSize = (screenWidth * 0.03).clamp(10.0, 14.0);
+    final valueFontSize = (screenWidth * 0.045).clamp(16.0, 20.0);
+    final padding = (screenWidth * 0.025).clamp(8.0, 12.0);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'TURN TIMER',
+          style: GoogleFonts.hanaleiFill(
+            fontSize: labelFontSize,
+            fontWeight: FontWeight.w500,
+            color: Colors.white54,
+          ),
+        ),
+        const SizedBox(height: 8),
+        GestureDetector(
+          onTap: () {
+            AudioService().playSecondaryButtonClick();
+            setState(() => _isTimerEnabled = !_isTimerEnabled);
+          },
+          child: Container(
+            height:
+                40 + (padding * 2), // Matching the height of number settings
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: _isTimerEnabled
+                    ? const Color(0xFF74E67C)
+                    : Colors.white24,
+                width: 2,
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  _isTimerEnabled ? Icons.timer : Icons.timer_off,
+                  color: _isTimerEnabled
+                      ? const Color(0xFF74E67C)
+                      : Colors.white54,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  _isTimerEnabled ? 'ON' : 'OFF',
+                  style: GoogleFonts.hanaleiFill(
+                    fontSize: valueFontSize,
+                    color: _isTimerEnabled
+                        ? const Color(0xFF74E67C)
+                        : Colors.white54,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDifficultyButton(
+    String label,
+    int difficulty,
+    Color color,
+    double screenWidth,
+  ) {
     final isSelected = _selectedDifficulty == difficulty;
+    final fontSize = (screenWidth * 0.03).clamp(10.0, 13.0);
+    final padding = (screenWidth * 0.02).clamp(8.0, 12.0);
+
     return GestureDetector(
       onTap: () {
         AudioService().playSecondaryButtonClick();
@@ -454,11 +728,11 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+        padding: EdgeInsets.symmetric(vertical: padding, horizontal: 8),
         decoration: BoxDecoration(
           color: isSelected ? color : Colors.grey.shade400.withOpacity(0.2),
           borderRadius: BorderRadius.circular(30),
-          border: Border.all(color: Colors.black, width: 1.5),
+          border: Border.all(color: Colors.black, width: 1.0),
           gradient: isSelected
               ? LinearGradient(
                   colors: [color.withOpacity(0.9), color.withOpacity(0.6)],
@@ -485,7 +759,7 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontWeight: FontWeight.bold,
-                fontSize: 13,
+                fontSize: fontSize,
                 foreground: Paint()
                   ..style = PaintingStyle.stroke
                   ..strokeWidth = 2
@@ -496,20 +770,20 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
             Text(
               label,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
-                fontSize: 13,
+                fontSize: fontSize,
               ),
             ),
             // ✅ Check icon when selected
             if (isSelected)
               Positioned(
-                right: 2,
-                top: 2,
+                right: 0,
+                top: 0,
                 child: Icon(
                   Icons.check_circle,
-                  size: 16,
+                  size: fontSize * 1.2,
                   color: Colors.white.withOpacity(0.9),
                 ),
               ),
@@ -525,14 +799,20 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
     required int min,
     required int max,
     required ValueChanged<int> onChanged,
+    required double screenWidth,
   }) {
+    final labelFontSize = (screenWidth * 0.03).clamp(10.0, 14.0);
+    final valueFontSize = (screenWidth * 0.045).clamp(16.0, 20.0);
+    final iconSize = (screenWidth * 0.05).clamp(16.0, 20.0);
+    final padding = (screenWidth * 0.025).clamp(8.0, 12.0);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
           style: GoogleFonts.hanaleiFill(
-            fontSize: 12,
+            fontSize: labelFontSize,
             fontWeight: FontWeight.w500,
             color: Colors.white54,
           ),
@@ -554,18 +834,18 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
                   }
                 },
                 child: Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: EdgeInsets.all(padding),
                   child: Icon(
                     Icons.remove,
                     color: value > min ? Colors.white : Colors.white38,
-                    size: 20,
+                    size: iconSize,
                   ),
                 ),
               ),
               // Value display
               Expanded(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  padding: EdgeInsets.symmetric(vertical: padding),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(8),
@@ -574,7 +854,7 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
                     child: Text(
                       value.toString(),
                       style: GoogleFonts.hanaleiFill(
-                        fontSize: 18,
+                        fontSize: valueFontSize,
                         fontWeight: FontWeight.w600,
                         color: Colors.black,
                       ),
@@ -591,11 +871,11 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
                   }
                 },
                 child: Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: EdgeInsets.all(padding),
                   child: Icon(
                     Icons.add,
                     color: value < max ? Colors.white : Colors.white38,
-                    size: 20,
+                    size: iconSize,
                   ),
                 ),
               ),
@@ -607,10 +887,15 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
   }
 
   Widget _buildActionChip({
+    required double screenWidth,
     required IconData icon,
     required String label,
     required VoidCallback onTap,
   }) {
+    final iconSize = (screenWidth * 0.045).clamp(16.0, 20.0);
+    final fontSize = (screenWidth * 0.035).clamp(12.0, 16.0);
+    final hPadding = (screenWidth * 0.03).clamp(12.0, 16.0);
+
     return Material(
       color: Colors.white.withOpacity(0.1),
       borderRadius: BorderRadius.circular(20),
@@ -618,17 +903,18 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
         onTap: onTap,
         borderRadius: BorderRadius.circular(20),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: EdgeInsets.symmetric(horizontal: hPadding, vertical: 8),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, color: Colors.white, size: 18),
+              Icon(icon, color: Colors.white, size: iconSize),
               const SizedBox(width: 6),
               Text(
                 label,
                 style: GoogleFonts.hanaleiFill(
                   color: Colors.white,
                   fontWeight: FontWeight.w500,
+                  fontSize: fontSize,
                 ),
               ),
             ],
@@ -638,11 +924,19 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
     );
   }
 
-  Widget _buildPlayersCard() {
+  Widget _buildPlayersCard(
+    double screenWidth,
+    double padding, {
+    bool expandHeight = false,
+  }) {
     final players = _room?.players.values.toList() ?? [];
+    final titleFontSize = (screenWidth * 0.035).clamp(12.0, 16.0);
+    final iconSize = (screenWidth * 0.05).clamp(18.0, 24.0);
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(padding),
+      width: double.infinity,
+      height: expandHeight ? double.infinity : null,
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.1),
         borderRadius: BorderRadius.circular(20),
@@ -652,12 +946,12 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
         children: [
           Row(
             children: [
-              const Icon(Icons.people, color: Colors.white70),
+              Icon(Icons.people, color: Colors.white70, size: iconSize),
               const SizedBox(width: 8),
               Text(
                 'PLAYERS (${players.length}/8)',
                 style: GoogleFonts.hanaleiFill(
-                  fontSize: 14,
+                  fontSize: titleFontSize,
                   fontWeight: FontWeight.w600,
                   color: Colors.white70,
                   letterSpacing: 1,
@@ -671,20 +965,31 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
               'Waiting for players...',
               style: GoogleFonts.hanaleiFill(color: Colors.white38),
             )
+          else if (expandHeight)
+            Expanded(
+              child: ListView.builder(
+                itemCount: players.length,
+                itemBuilder: (context, index) =>
+                    _buildPlayerTile(players[index], screenWidth),
+              ),
+            )
           else
-            ...players.map((player) => _buildPlayerTile(player)),
+            ...players.map((player) => _buildPlayerTile(player, screenWidth)),
         ],
       ),
     );
   }
 
-  Widget _buildPlayerTile(OnlinePlayer player) {
+  Widget _buildPlayerTile(OnlinePlayer player, double screenWidth) {
     final isHost = player.isHost;
     final isMe = player.id == _roomService.currentPlayerId;
+    final avatarRadius = (screenWidth * 0.045).clamp(16.0, 22.0);
+    final nameFontSize = (screenWidth * 0.04).clamp(14.0, 18.0);
+    final paddingV = (screenWidth * 0.025).clamp(10.0, 12.0);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: paddingV),
       decoration: BoxDecoration(
         color: isHost
             ? const Color(0xFFFFEA00).withOpacity(0.15)
@@ -697,13 +1002,16 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
       child: Row(
         children: [
           CircleAvatar(
-            radius: 18,
+            radius: avatarRadius,
             backgroundColor: isHost
                 ? const Color(0xFFFFEA00)
                 : const Color(0xFF74E67C),
             child: Text(
               player.nickname[0].toUpperCase(),
-              style: GoogleFonts.hanaleiFill(color: Colors.black, fontSize: 16),
+              style: GoogleFonts.hanaleiFill(
+                color: Colors.black,
+                fontSize: avatarRadius * 0.9,
+              ),
             ),
           ),
           const SizedBox(width: 12),
@@ -718,6 +1026,7 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
                       style: GoogleFonts.hanaleiFill(
                         color: Colors.white,
                         fontWeight: FontWeight.w500,
+                        fontSize: nameFontSize,
                       ),
                     ),
                     if (isMe)
@@ -725,7 +1034,7 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
                         ' (You)',
                         style: GoogleFonts.hanaleiFill(
                           color: Colors.white54,
-                          fontSize: 12,
+                          fontSize: nameFontSize * 0.8,
                         ),
                       ),
                   ],
@@ -735,7 +1044,7 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
                     'Host',
                     style: GoogleFonts.hanaleiFill(
                       color: const Color(0xFFFFEA00),
-                      fontSize: 12,
+                      fontSize: nameFontSize * 0.8,
                     ),
                   ),
               ],
@@ -745,11 +1054,14 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
           Icon(
             player.isConnected ? Icons.wifi : Icons.wifi_off,
             color: player.isConnected ? Colors.green : Colors.red,
-            size: 18,
+            size: avatarRadius,
           ),
           // Kick button (for non-host players)
           if (!isHost && !isMe)
             IconButton(
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+              iconSize: avatarRadius * 1.2,
               onPressed: () => _kickPlayer(player.id),
               icon: const Icon(Icons.remove_circle_outline, color: Colors.red),
               tooltip: 'Kick player',
@@ -759,9 +1071,11 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
     );
   }
 
-  Widget _buildStartButton() {
+  Widget _buildStartButton(double screenWidth) {
     final playerCount = _room?.players.length ?? 0;
     final canStart = playerCount >= 2;
+    final fontSize = (screenWidth * 0.05).clamp(18.0, 24.0);
+    final padding = (screenWidth * 0.04).clamp(14.0, 20.0);
 
     return SizedBox(
       width: double.infinity,
@@ -770,14 +1084,17 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFF74E67C),
           disabledBackgroundColor: Colors.grey,
-          padding: const EdgeInsets.symmetric(vertical: 16),
+          padding: EdgeInsets.symmetric(vertical: padding),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(30),
           ),
         ),
         child: Text(
           canStart ? 'START GAME' : 'WAITING FOR PLAYERS...',
-          style: GoogleFonts.hanaleiFill(fontSize: 20, color: Colors.white),
+          style: GoogleFonts.hanaleiFill(
+            fontSize: fontSize,
+            color: Colors.white,
+          ),
         ),
       ),
     );

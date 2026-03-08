@@ -144,6 +144,15 @@ class _JoinRoomScreenState extends State<JoinRoomScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final screenWidth = size.width;
+
+    // Responsive scaling
+    final padding = (screenWidth * 0.05).clamp(16.0, 32.0);
+    final titleFontSize = (screenWidth * 0.06).clamp(20.0, 32.0);
+    final labelFontSize = (screenWidth * 0.035).clamp(12.0, 16.0);
+    final bodyFontSize = (screenWidth * 0.04).clamp(14.0, 18.0);
+
     return WillPopScope(
       onWillPop: () async {
         if (_joinedRoom != null) {
@@ -160,11 +169,25 @@ class _JoinRoomScreenState extends State<JoinRoomScreen> {
             SafeArea(
               child: Column(
                 children: [
-                  _buildHeader(),
+                  _buildHeader(titleFontSize),
                   Expanded(
-                    child: _joinedRoom != null
-                        ? _buildWaitingRoom()
-                        : _buildJoinForm(),
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 600),
+                        child: _joinedRoom != null
+                            ? _buildWaitingRoom(
+                                padding,
+                                labelFontSize,
+                                bodyFontSize,
+                              )
+                            : _buildJoinForm(
+                                padding,
+                                labelFontSize,
+                                titleFontSize,
+                                bodyFontSize,
+                              ),
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -175,7 +198,7 @@ class _JoinRoomScreenState extends State<JoinRoomScreen> {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(double titleFontSize) {
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Row(
@@ -190,7 +213,10 @@ class _JoinRoomScreenState extends State<JoinRoomScreen> {
             child: Text(
               _joinedRoom != null ? 'WAITING ROOM' : 'JOIN ROOM',
               textAlign: TextAlign.center,
-              style: GoogleFonts.hanaleiFill(fontSize: 24, color: Colors.white),
+              style: GoogleFonts.hanaleiFill(
+                fontSize: titleFontSize,
+                color: Colors.white,
+              ),
             ),
           ),
           const SizedBox(width: 48),
@@ -199,18 +225,23 @@ class _JoinRoomScreenState extends State<JoinRoomScreen> {
     );
   }
 
-  Widget _buildJoinForm() {
+  Widget _buildJoinForm(
+    double padding,
+    double labelFontSize,
+    double titleFontSize,
+    double bodyFontSize,
+  ) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(padding),
       child: Column(
         children: [
-          const SizedBox(height: 40),
+          SizedBox(height: padding * 1.5),
 
           // Room code input
           Text(
             'ENTER ROOM CODE',
-            style: GoogleFonts.poppins(
-              fontSize: 14,
+            style: GoogleFonts.hanaleiFill(
+              fontSize: labelFontSize,
               fontWeight: FontWeight.w600,
               color: Colors.white70,
               letterSpacing: 2,
@@ -218,7 +249,7 @@ class _JoinRoomScreenState extends State<JoinRoomScreen> {
           ),
           const SizedBox(height: 20),
 
-          _buildCodeInput(),
+          _buildCodeInput(titleFontSize * 1.5),
           const SizedBox(height: 16),
 
           // Error message
@@ -236,7 +267,10 @@ class _JoinRoomScreenState extends State<JoinRoomScreen> {
                   Expanded(
                     child: Text(
                       _errorMessage!,
-                      style: GoogleFonts.poppins(color: Colors.red),
+                      style: GoogleFonts.hanaleiFill(
+                        color: Colors.red,
+                        fontSize: labelFontSize,
+                      ),
                     ),
                   ),
                 ],
@@ -255,10 +289,16 @@ class _JoinRoomScreenState extends State<JoinRoomScreen> {
               child: TextField(
                 controller: _passwordController,
                 obscureText: true,
-                style: GoogleFonts.poppins(color: Colors.white),
+                style: GoogleFonts.hanaleiFill(
+                  color: Colors.white,
+                  fontSize: bodyFontSize,
+                ),
                 decoration: InputDecoration(
                   labelText: 'Room Password',
-                  labelStyle: GoogleFonts.poppins(color: Colors.white54),
+                  labelStyle: GoogleFonts.hanaleiFill(
+                    color: Colors.white54,
+                    fontSize: labelFontSize,
+                  ),
                   prefixIcon: const Icon(
                     Icons.lock_outline,
                     color: Colors.white54,
@@ -295,7 +335,7 @@ class _JoinRoomScreenState extends State<JoinRoomScreen> {
                   : Text(
                       'JOIN ROOM',
                       style: GoogleFonts.hanaleiFill(
-                        fontSize: 20,
+                        fontSize: bodyFontSize * 1.2,
                         color: Colors.black,
                       ),
                     ),
@@ -306,7 +346,7 @@ class _JoinRoomScreenState extends State<JoinRoomScreen> {
     );
   }
 
-  Widget _buildCodeInput() {
+  Widget _buildCodeInput(double fontSize) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -319,14 +359,14 @@ class _JoinRoomScreenState extends State<JoinRoomScreen> {
         textCapitalization: TextCapitalization.characters,
         maxLength: 6,
         style: GoogleFonts.hanaleiFill(
-          fontSize: 36,
+          fontSize: fontSize,
           color: Colors.white,
           letterSpacing: 8,
         ),
         decoration: InputDecoration(
           hintText: '------',
           hintStyle: GoogleFonts.hanaleiFill(
-            fontSize: 36,
+            fontSize: fontSize,
             color: Colors.white24,
             letterSpacing: 8,
           ),
@@ -342,11 +382,15 @@ class _JoinRoomScreenState extends State<JoinRoomScreen> {
     );
   }
 
-  Widget _buildWaitingRoom() {
+  Widget _buildWaitingRoom(
+    double padding,
+    double labelFontSize,
+    double bodyFontSize,
+  ) {
     final players = _joinedRoom?.players.values.toList() ?? [];
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(padding),
       child: Column(
         children: [
           // Status
@@ -371,11 +415,14 @@ class _JoinRoomScreenState extends State<JoinRoomScreen> {
                   ),
                 ),
                 const SizedBox(width: 12),
-                Text(
-                  'Waiting for host to start...',
-                  style: GoogleFonts.poppins(
-                    color: const Color(0xFFFFEA00),
-                    fontWeight: FontWeight.w500,
+                Expanded(
+                  child: Text(
+                    'Waiting for host to start...',
+                    style: GoogleFonts.hanaleiFill(
+                      color: const Color(0xFFFFEA00),
+                      fontWeight: FontWeight.w500,
+                      fontSize: bodyFontSize,
+                    ),
                   ),
                 ),
               ],
@@ -399,8 +446,8 @@ class _JoinRoomScreenState extends State<JoinRoomScreen> {
                     const SizedBox(width: 8),
                     Text(
                       'PLAYERS IN ROOM',
-                      style: GoogleFonts.poppins(
-                        fontSize: 14,
+                      style: GoogleFonts.hanaleiFill(
+                        fontSize: labelFontSize,
                         fontWeight: FontWeight.w600,
                         color: Colors.white70,
                       ),
@@ -408,7 +455,9 @@ class _JoinRoomScreenState extends State<JoinRoomScreen> {
                   ],
                 ),
                 const SizedBox(height: 16),
-                ...players.map((player) => _buildPlayerTile(player)),
+                ...players.map(
+                  (player) => _buildPlayerTile(player, bodyFontSize),
+                ),
               ],
             ),
           ),
@@ -417,7 +466,7 @@ class _JoinRoomScreenState extends State<JoinRoomScreen> {
     );
   }
 
-  Widget _buildPlayerTile(OnlinePlayer player) {
+  Widget _buildPlayerTile(OnlinePlayer player, double bodyFontSize) {
     final isHost = player.isHost;
     final isMe = player.id == _roomService.currentPlayerId;
 
@@ -452,19 +501,23 @@ class _JoinRoomScreenState extends State<JoinRoomScreen> {
               children: [
                 Row(
                   children: [
-                    Text(
-                      player.nickname,
-                      style: GoogleFonts.poppins(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w500,
+                    Flexible(
+                      child: Text(
+                        player.nickname,
+                        style: GoogleFonts.hanaleiFill(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w500,
+                          fontSize: bodyFontSize,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     if (isMe)
                       Text(
                         ' (You)',
-                        style: GoogleFonts.poppins(
+                        style: GoogleFonts.hanaleiFill(
                           color: Colors.white54,
-                          fontSize: 12,
+                          fontSize: bodyFontSize * 0.75,
                         ),
                       ),
                   ],
@@ -472,9 +525,9 @@ class _JoinRoomScreenState extends State<JoinRoomScreen> {
                 if (isHost)
                   Text(
                     'Host',
-                    style: GoogleFonts.poppins(
+                    style: GoogleFonts.hanaleiFill(
                       color: const Color(0xFFFFEA00),
-                      fontSize: 12,
+                      fontSize: bodyFontSize * 0.75,
                     ),
                   ),
               ],

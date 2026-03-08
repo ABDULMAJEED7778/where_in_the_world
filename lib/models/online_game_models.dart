@@ -65,6 +65,13 @@ class OnlineGameState {
   final OnlineGameStatus status;
   final String? lastRoundWinnerId; // ID of the winner (correct or nearest)
   final String? lastRoundWinReason; // 'correct' or 'nearest'
+  final String? turnEndTime; // ID of the winner (correct or nearest)
+
+  // Timer settings
+  final bool isTimerEnabled;
+  final int turnDurationSeconds;
+  final bool nextRoundTimerEnabled;
+  final int nextRoundTurnDuration;
 
   OnlineGameState({
     this.currentLandmarkId,
@@ -78,6 +85,11 @@ class OnlineGameState {
     this.status = OnlineGameStatus.lobby,
     this.lastRoundWinnerId,
     this.lastRoundWinReason,
+    this.turnEndTime,
+    this.isTimerEnabled = true,
+    this.turnDurationSeconds = 60,
+    this.nextRoundTimerEnabled = true,
+    this.nextRoundTurnDuration = 60,
   });
 
   OnlineGameState copyWith({
@@ -92,6 +104,11 @@ class OnlineGameState {
     OnlineGameStatus? status,
     String? lastRoundWinnerId,
     String? lastRoundWinReason,
+    String? turnEndTime,
+    bool? isTimerEnabled,
+    int? turnDurationSeconds,
+    bool? nextRoundTimerEnabled,
+    int? nextRoundTurnDuration,
   }) {
     return OnlineGameState(
       currentLandmarkId: currentLandmarkId ?? this.currentLandmarkId,
@@ -105,6 +122,13 @@ class OnlineGameState {
       status: status ?? this.status,
       lastRoundWinnerId: lastRoundWinnerId ?? this.lastRoundWinnerId,
       lastRoundWinReason: lastRoundWinReason ?? this.lastRoundWinReason,
+      turnEndTime: turnEndTime ?? this.turnEndTime,
+      isTimerEnabled: isTimerEnabled ?? this.isTimerEnabled,
+      turnDurationSeconds: turnDurationSeconds ?? this.turnDurationSeconds,
+      nextRoundTimerEnabled:
+          nextRoundTimerEnabled ?? this.nextRoundTimerEnabled,
+      nextRoundTurnDuration:
+          nextRoundTurnDuration ?? this.nextRoundTurnDuration,
     );
   }
 
@@ -121,6 +145,11 @@ class OnlineGameState {
       'status': status.name,
       'lastRoundWinnerId': lastRoundWinnerId,
       'lastRoundWinReason': lastRoundWinReason,
+      'turnEndTime': turnEndTime,
+      'isTimerEnabled': isTimerEnabled,
+      'turnDurationSeconds': turnDurationSeconds,
+      'nextRoundTimerEnabled': nextRoundTimerEnabled,
+      'nextRoundTurnDuration': nextRoundTurnDuration,
     };
   }
 
@@ -174,6 +203,11 @@ class OnlineGameState {
         status: status,
         lastRoundWinnerId: json['lastRoundWinnerId'] as String?,
         lastRoundWinReason: json['lastRoundWinReason'] as String?,
+        turnEndTime: json['turnEndTime'] as String?,
+        isTimerEnabled: json['isTimerEnabled'] as bool? ?? true,
+        turnDurationSeconds: json['turnDurationSeconds'] as int? ?? 60,
+        nextRoundTimerEnabled: json['nextRoundTimerEnabled'] as bool? ?? true,
+        nextRoundTurnDuration: json['nextRoundTurnDuration'] as int? ?? 60,
       );
     } catch (e, stack) {
       print('❌ ERROR parsing OnlineGameState: $e');

@@ -64,6 +64,8 @@ class RoomService {
     int totalRounds = 6,
     int difficulty = 1,
     int questionsPerTurn = 2,
+    bool isTimerEnabled = true,
+    int timerDuration = 60,
   }) async {
     final roomCode = _generateRoomCode();
     final playerId = _uuid.v4();
@@ -88,6 +90,10 @@ class RoomService {
         difficulty: difficulty,
         questionsPerTurn: questionsPerTurn,
         status: OnlineGameStatus.lobby,
+        isTimerEnabled: isTimerEnabled,
+        turnDurationSeconds: timerDuration,
+        nextRoundTimerEnabled: isTimerEnabled,
+        nextRoundTurnDuration: timerDuration,
       ),
     );
 

@@ -1,0 +1,98 @@
+workflows:
+  ios-release:
+    name: iOS Release Build
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+      groups:
+        - app_secrets  # Contains GOOGLE_AI_API_KEY
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.alshawea.whereintheworld
+    
+    scripts:
+      # Create .env files from Codemagic environment variables
+      - name: Create .env files
+        script: |
+          echo "GOOGLE_AI_API_KEY=$GOOGLE_AI_API_KEY" > .env
+          echo "GOOGLE_AI_API_KEY=$GOOGLE_AI_API_KEY" > assets/.env
+      
+      # Install Flutter dependencies
+      - name: Install dependencies
+        script: flutter pub get
+      
+      # Install CocoaPods dependencies
+      - name: Install CocoaPods
+        script: |
+          cd ios
+          pod install
+      
+      # Generate app icons and splash screen
+      - name: Generate launcher icons
+        script: dart run flutter_launcher_icons
+      
+      - name: Generate splash screen
+        script: dart run flutter_native_splash:create
+      
+      # Run Flutter analyze (optional but recommended)
+      - name: Analyze code
+        script: flutter analyze --no-fatal-infos || true
+      
+      # Build iOS IPA
+      - name: Build iOS
+        script: flutter build ipa --release --export-options-plist=/Users/builder/export_options.plist
+    
+    artifacts:
+      - build/ios/ipa/*.ipa
+    
+    publishing:
+      email:
+        recipients:
+          - your-email@example.com  # TODO: Replace with your email
+        notify:
+          success: true
+          failure: true
+      
+      # Uncomment below to auto-publish to App Store Connect
+      # app_store_connect:
+      #   auth: integration
+      #   submit_to_testflight: true
+
+  ios-debug:
+    name: iOS Debug Build (Testing)
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+      groups:
+        - app_secrets
+      ios_signing:
+        distribution_type: development
+        bundle_identifier: com.alshawea.whereintheworld
+    
+    scripts:
+      - name: Create .env files
+        script: |
+          echo "GOOGLE_AI_API_KEY=$GOOGLE_AI_API_KEY" > .env
+          echo "GOOGLE_AI_API_KEY=$GOOGLE_AI_API_KEY" > assets/.env
+      
+      - name: Install dependencies
+        script: flutter pub get
+      
+      - name: Install CocoaPods
+        script: |
+          cd ios
+          pod install
+      
+      - name: Build iOS Debug
+        script: flutter build ios --debug --no-codesign
+    
+    artifacts:
+      - build/ios/iphoneos/*.app

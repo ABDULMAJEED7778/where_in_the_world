@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 import 'package:provider/provider.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../models/game_models.dart';
 import '../providers/game_provider.dart';
 
@@ -28,6 +29,7 @@ class _VisualFeedbackOverlayState extends State<VisualFeedbackOverlay>
 
   Color _flashColor = Colors.transparent;
   bool _showBalloon = false;
+  bool _showTimeout = false;
   StreamSubscription? _subscription;
 
   @override
@@ -113,6 +115,9 @@ class _VisualFeedbackOverlayState extends State<VisualFeedbackOverlay>
       case GameEvent.incorrectGuess:
         _playIncorrectFeedback();
         break;
+      case GameEvent.turnTimeout:
+        _playTimeoutFeedback();
+        break;
       case GameEvent.roundTransition:
         _playRoundTransition();
         break;
@@ -142,6 +147,26 @@ class _VisualFeedbackOverlayState extends State<VisualFeedbackOverlay>
     _shakeController.forward(from: 0.0);
     _flashController.reset();
     _flashController.forward().then((_) => _flashController.reverse());
+  }
+
+  void _playTimeoutFeedback() {
+    setState(() {
+      _showTimeout = true;
+      _flashColor = Colors.orange.withOpacity(0.4);
+    });
+
+    _shakeController.forward(from: 0.0);
+    _flashController.reset();
+    _flashController.forward().then((_) => _flashController.reverse());
+
+    // Hide animation after 2.5 seconds
+    Future.delayed(const Duration(milliseconds: 2500), () {
+      if (mounted) {
+        setState(() {
+          _showTimeout = false;
+        });
+      }
+    });
   }
 
   void _playRoundTransition() {
@@ -185,6 +210,62 @@ class _VisualFeedbackOverlayState extends State<VisualFeedbackOverlay>
                   },
                 ),
               ),
+
+              // Time Out Overlay
+              if (_showTimeout)
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: Center(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 40,
+                          vertical: 20,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.85),
+                          borderRadius: BorderRadius.circular(24),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.orange.withOpacity(0.6),
+                              blurRadius: 20,
+                              spreadRadius: 4,
+                            ),
+                          ],
+                          border: Border.all(
+                            color: Colors.orangeAccent,
+                            width: 3,
+                          ),
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.timer_off,
+                              color: Colors.orangeAccent,
+                              size: 48,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              "TIME'S UP!",
+                              style: GoogleFonts.hanaleiFill(
+                                color: Colors.orangeAccent,
+                                fontSize: 42,
+                                fontWeight: FontWeight.bold,
+                                shadows: [
+                                  const Shadow(
+                                    color: Colors.black,
+                                    blurRadius: 10,
+                                    offset: Offset(2, 2),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
             ],
           ),
         );

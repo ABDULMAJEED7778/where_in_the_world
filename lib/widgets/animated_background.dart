@@ -224,27 +224,54 @@ class _AnimatedBackgroundState extends State<AnimatedBackground>
     final Size screenSize = MediaQuery.of(context).size;
     final double screenWidth = screenSize.width;
     final double screenHeight = screenSize.height;
+    final double aspectRatio = screenWidth / screenHeight;
 
-    // Scale relative to a 390pt base width
-    final double scale = (screenWidth / 390.0).clamp(0.8, 2.4);
-    final double pngSize = 160.0 * scale; // Increased for better visibility
-    final double lottieSize = 130.0 * scale; // Increased for better visibility
-    final double amplitude = 10.0 * scale; // Slightly increased
+    // Dynamic sizing based on screen width
+    // Phone (~375): ~95px, Tablet (~768): ~192px, Desktop (~1200): ~270px
+    final double pngSize = (screenWidth * 0.25).clamp(80.0, 300.0);
+    final double lottieSize = (screenWidth * 0.20).clamp(65.0, 250.0);
+    final double amplitude = (screenWidth * 0.02).clamp(5.0, 25.0);
 
-    // Edge-aligned positions with screen-size adjustment
-    final Offset topLeftEdge = Offset(-pngSize * 0.3, -pngSize * 0.2);
+    // Edge offset as percentage of asset size
+    final double edgeOffset = pngSize * 0.25;
+    final double lottieEdgeOffset = lottieSize * 0.25;
+
+    // For wide screens (laptops/desktops), push elements more to the edges
+    // For narrow screens (phones), keep elements closer to visible area
+    final double horizontalPush = aspectRatio > 1.5
+        ? pngSize * 0.4
+        : pngSize * 0.25;
+
+    // Responsive edge-aligned positions
+    final Offset topLeftEdge = Offset(-horizontalPush, -edgeOffset);
     final Offset topRightEdge = Offset(
-      screenWidth - pngSize * 0.7,
-      -pngSize * 0.15,
+      screenWidth - pngSize + horizontalPush,
+      -edgeOffset * 0.6,
     );
     final Offset bottomLeftEdge = Offset(
-      -pngSize * 0.2,
-      screenHeight - pngSize * 0.8,
+      -horizontalPush,
+      screenHeight - pngSize + edgeOffset,
     );
-    final Offset leftCenterEdge = Offset(-pngSize * 0.25, screenHeight * 0.4);
+    final Offset leftCenterEdge = Offset(
+      -horizontalPush,
+      screenHeight * 0.4 - pngSize * 0.5,
+    );
     final Offset rightCenterEdge = Offset(
+      screenWidth - pngSize * 0.6 + horizontalPush * 0.5,
+      screenHeight * 0.5 - pngSize * 0.5,
+    );
+
+    // Lottie positions - keep more visible on small screens
+    final Offset lottieTopLeft = Offset(-lottieEdgeOffset, screenHeight * 0.12);
+    final Offset lottieBottomRight = Offset(
+      screenWidth - lottieSize + lottieEdgeOffset,
+      screenHeight * 0.72,
+    );
+
+    // Flag position - top right area
+    final Offset flagPosition = Offset(
       screenWidth - pngSize * 0.5,
-      screenHeight * 0.5,
+      screenHeight * 0.22,
     );
 
     return Positioned.fill(
@@ -318,19 +345,19 @@ class _AnimatedBackgroundState extends State<AnimatedBackground>
             // Two Lottie animations - positioned at edges
             _buildLottie(
               "assets/lotties/compass_anim.json",
-              Offset(-lottieSize * 0.3, screenHeight * 0.15),
+              lottieTopLeft,
               size: lottieSize,
             ),
             _buildLottie(
               "assets/lotties/globe_anim.json",
-              Offset(screenWidth - lottieSize * 0.7, screenHeight * 0.75),
+              lottieBottomRight,
               size: lottieSize,
             ),
 
             // Bottom-right corner flag - rendered LAST so it appears on top
             _buildFloatingImage(
               "assets/images/palastine_flag.png",
-              Offset(screenWidth - pngSize * 0.35, screenHeight * 0.25),
+              flagPosition,
               size: pngSize * 0.7,
               amplitude: amplitude * 0.3,
               phase: 3 * pi / 2,

@@ -221,6 +221,8 @@ class AudioService {
   // UI sounds
   void playButtonClick() => playSfx('ui/button_click.mp3');
   void playSecondaryButtonClick() => playSfx('ui/secondary_button_click.mp3');
+  void playTimerTick() =>
+      playSfx('ui/secondary_button_click.mp3'); // Warning tick
 
   // Game flow sounds
   void playGameStart() => playSfx('game_flow/game_start.mp3');

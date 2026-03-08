@@ -62,6 +62,11 @@ A geography quiz party game built with Flutter where players guess countries fro
 | 📝 **Question History** | View previously asked questions and answers |
 | 🎵 **Audio System** | Background music and sound effects |
 | 🎨 **Beautiful UI** | Modern glassmorphism design with smooth animations |
+| ⏱️ **Turn Timer** | Configurable countdown timer per turn — auto-skips on expiry |
+| 🎆 **Visual Feedback** | Animated overlays for correct/incorrect guesses |
+| 🏆 **Game End Screen** | Premium results screen with winner highlight and final standings |
+| 📱 **Cross-Platform** | Android, iOS, Web, and Desktop support |
+| 🔄 **CI/CD** | Automated iOS/Android builds via Codemagic |
 
 ---
 
@@ -223,8 +228,9 @@ stateDiagram-v2
 
 ### Prerequisites
 
-- Flutter SDK (3.8.1 or higher)
+- Flutter SDK (3.9.0 or higher)
 - Dart SDK
+- Android Studio or Xcode (for mobile development)
 - Chrome browser (for web development)
 
 ### Installation
@@ -246,37 +252,32 @@ The game uses Google AI (Gemini) to answer questions about landmarks. You need t
    - Click "Create API Key"
    - Copy your API key
 
-2. **Configure the API Key** (choose one method):
-
-   **Method 1: Environment Variable (Recommended)**
-   ```bash
-   # Windows PowerShell
-   $env:GOOGLE_AI_API_KEY="your-api-key-here"
-   
-   # Linux/Mac
-   export GOOGLE_AI_API_KEY="your-api-key-here"
+2. **Configure the API Key**:
+   Create a `.env` file in the project root **and** in `assets/`:
+   ```
+   GOOGLE_AI_API_KEY=your-api-key-here
    ```
 
-   **Method 2: Programmatically**
-   ```dart
-   // In your app initialization
-   context.read<GameProvider>().updateAIApiKey('your-api-key-here');
-   ```
+### Firebase Setup (for Online Multiplayer)
 
-   **Method 3: Update config file**
-   - Edit `lib/config/api_config.dart` and replace `YOUR_API_KEY_HERE` with your actual API key
-   - ⚠️ **Not recommended for production** - this exposes your key in code
+1. Create a Firebase project at [console.firebase.google.com](https://console.firebase.google.com/)
+2. Enable **Realtime Database**
+3. Add your platform apps:
+   - **Android**: Download `google-services.json` → place in `android/app/`
+   - **iOS**: Download `GoogleService-Info.plist` → place in `ios/Runner/`
+4. Update `lib/firebase_options.dart` with your Firebase config
 
 ### Running the App
 
-For web development:
 ```bash
+# Web
 flutter run -d chrome
-```
 
-For Android:
-```bash
+# Android
 flutter run -d android
+
+# iOS (requires Mac or Codemagic CI/CD)
+flutter run -d ios
 ```
 
 ---
@@ -285,31 +286,48 @@ flutter run -d android
 
 ```
 lib/
-├── config/          # Configuration (API keys, etc.)
-├── data/            # Static data (countries, landmarks)
-├── models/          # Data models (Player, Question, Landmark, etc.)
-├── providers/       # State management (GameProvider, OnlineGameProvider)
-├── screens/         # UI screens
+├── config/              # Configuration (API keys, etc.)
+├── data/                # Static data (countries, landmarks)
+├── models/              # Data models (Player, Question, Landmark, etc.)
+├── providers/           # State management
+│   ├── game_provider.dart
+│   ├── online_game_provider.dart
+│   └── mixins/          # Provider mixins (game events, etc.)
+├── screens/             # UI screens
 │   ├── launching_screen.dart
 │   ├── mode_selection_screen.dart
 │   ├── game_lobby_screen.dart
 │   ├── main_game_screen.dart
+│   ├── game_end_screen.dart
 │   ├── online_lobby_screen.dart
 │   ├── online_game_screen.dart
 │   ├── create_room_screen.dart
 │   └── join_room_screen.dart
-├── services/        # Services (AI, Audio, Room, Photos)
-├── widgets/         # Reusable UI components
-├── utils/           # Utility functions (responsive helpers)
-└── main.dart        # App entry point
+├── services/            # Services (AI, Audio, Room, Photos)
+├── widgets/             # Reusable UI components
+│   ├── lobby/           # Lobby-specific widgets
+│   ├── online/          # Online mode widgets
+│   ├── turn_timer_widget.dart
+│   ├── visual_feedback_overlay.dart
+│   ├── guess_dialog.dart
+│   ├── question_dialog.dart
+│   ├── round_end_dialog.dart
+│   └── ...              # More dialogs and components
+├── utils/               # Utility functions (responsive helpers)
+└── main.dart            # App entry point
 
 assets/
-├── images/          # General app images
-├── landmarks/       # Landmark images for the game
-├── lotties/         # Lottie animation files
-└── sounds/          # Audio files (music & effects)
+├── images/              # General app images
+├── landmarks/           # Landmark images for the game
+├── lotties/             # Lottie animation files
+└── sounds/              # Audio files (music & effects)
 
-screenshots/         # App screenshots (for README)
+test/                    # Unit and widget tests
+├── data/
+├── helpers/
+├── models/
+├── providers/
+└── widgets/
 ```
 
 ---
@@ -318,12 +336,14 @@ screenshots/         # App screenshots (for README)
 
 | Technology | Purpose |
 |------------|---------|
-| **Flutter** | Cross-platform UI framework |
+| **Flutter 3.9+** | Cross-platform UI framework |
 | **Provider** | State management |
-| **Firebase** | Backend for online multiplayer |
+| **Firebase Realtime DB** | Backend for online multiplayer |
 | **Google AI (Gemini)** | AI-powered question answering |
 | **Lottie** | Beautiful animations |
 | **Material Design 3** | Modern UI components |
+| **Audioplayers** | Background music & sound effects |
+| **Codemagic** | CI/CD for iOS & Android builds |
 
 ---
 
@@ -365,12 +385,17 @@ flowchart TB
 
 - [x] ~~Online multiplayer support~~
 - [x] ~~Sound effects and music~~
+- [x] ~~Turn timer with auto-skip~~
+- [x] ~~Game end screen with winner highlight~~
+- [x] ~~Visual feedback for guesses~~
+- [x] ~~iOS support & CI/CD~~
 - [ ] More landmark categories
 - [ ] Achievement system
 - [ ] Custom landmark upload
 - [ ] Tournament mode
 - [ ] Statistics tracking
 - [ ] Localization (multiple languages)
+- [ ] App Store & Play Store publishing
 
 ---
 

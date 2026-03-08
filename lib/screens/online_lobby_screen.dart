@@ -76,6 +76,23 @@ class _OnlineLobbyScreenState extends State<OnlineLobbyScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final aspectRatio = screenWidth / screenHeight;
+
+    // Reduce spacing on short/wide screens (tablets in landscape, small windows)
+    final isShortScreen = screenHeight < 700 || aspectRatio >= 1.0;
+    final spacingMultiplier = isShortScreen ? 0.5 : 1.0;
+
+    // Dynamic responsive values
+    final titleFontSize = (screenWidth * 0.08).clamp(24.0, 48.0);
+    final subtitleFontSize = (screenWidth * 0.035).clamp(11.0, 16.0);
+    final padding = (screenWidth * 0.05).clamp(12.0, 28.0);
+    final spacing = ((screenHeight * 0.04) * spacingMultiplier).clamp(
+      16.0,
+      40.0,
+    );
+
     return Scaffold(
       backgroundColor: const Color(0xFF2D1B69),
       body: Stack(
@@ -85,12 +102,12 @@ class _OnlineLobbyScreenState extends State<OnlineLobbyScreen> {
             child: Column(
               children: [
                 // Back button and title
-                _buildHeader(),
+                _buildHeader(screenWidth),
 
                 Expanded(
                   child: Center(
                     child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(24),
+                      padding: EdgeInsets.all(padding),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -99,37 +116,39 @@ class _OnlineLobbyScreenState extends State<OnlineLobbyScreen> {
                             'ONLINE\nMULTIPLAYER',
                             textAlign: TextAlign.center,
                             style: GoogleFonts.hanaleiFill(
-                              fontSize: 36,
+                              fontSize: titleFontSize,
                               color: Colors.white,
                               height: 1.2,
                             ),
                           ),
-                          const SizedBox(height: 8),
+                          SizedBox(height: spacing * 0.2),
                           Text(
                             'Play with friends anywhere!',
                             style: GoogleFonts.poppins(
-                              fontSize: 14,
+                              fontSize: subtitleFontSize,
                               color: Colors.white70,
                             ),
                           ),
-                          const SizedBox(height: 40),
+                          SizedBox(height: spacing),
 
                           // Nickname Input
-                          _buildNicknameInput(),
-                          const SizedBox(height: 40),
+                          _buildNicknameInput(screenWidth),
+                          SizedBox(height: spacing),
 
                           // Create Room Button
                           _buildActionButton(
+                            screenWidth: screenWidth,
                             icon: Icons.add_circle_outline,
                             label: 'CREATE ROOM',
                             description: 'Host a game for others to join',
                             color: const Color(0xFF74E67C),
                             onTap: _navigateToCreateRoom,
                           ),
-                          const SizedBox(height: 20),
+                          SizedBox(height: padding * 0.8),
 
                           // Join Room Button
                           _buildActionButton(
+                            screenWidth: screenWidth,
                             icon: Icons.login_rounded,
                             label: 'JOIN ROOM',
                             description: 'Enter a room code to join',
@@ -149,9 +168,12 @@ class _OnlineLobbyScreenState extends State<OnlineLobbyScreen> {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(double screenWidth) {
+    final padding = (screenWidth * 0.04).clamp(12.0, 24.0);
+    final iconSize = (screenWidth * 0.06).clamp(22.0, 32.0);
+
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(padding),
       child: Row(
         children: [
           IconButton(
@@ -159,22 +181,32 @@ class _OnlineLobbyScreenState extends State<OnlineLobbyScreen> {
               AudioService().playSecondaryButtonClick();
               Navigator.pop(context);
             },
-            icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+            icon: Icon(
+              Icons.arrow_back_ios,
+              color: Colors.white,
+              size: iconSize,
+            ),
           ),
           const Spacer(),
-          const Icon(Icons.wifi, color: Colors.white, size: 28),
+          Icon(Icons.wifi, color: Colors.white, size: iconSize),
         ],
       ),
     );
   }
 
-  Widget _buildNicknameInput() {
+  Widget _buildNicknameInput(double screenWidth) {
+    final maxWidth = (screenWidth * 0.9).clamp(300.0, 500.0);
+    final padding = (screenWidth * 0.05).clamp(16.0, 24.0);
+    final labelFontSize = (screenWidth * 0.03).clamp(10.0, 14.0);
+    final inputFontSize = (screenWidth * 0.045).clamp(16.0, 20.0);
+    final borderRadius = (screenWidth * 0.05).clamp(16.0, 24.0);
+
     return Container(
-      constraints: const BoxConstraints(maxWidth: 400),
-      padding: const EdgeInsets.all(20),
+      constraints: BoxConstraints(maxWidth: maxWidth),
+      padding: EdgeInsets.all(padding),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(borderRadius),
         border: Border.all(
           color: _isNicknameValid
               ? const Color(0xFF74E67C)
@@ -188,32 +220,40 @@ class _OnlineLobbyScreenState extends State<OnlineLobbyScreen> {
           Text(
             'YOUR NICKNAME',
             style: GoogleFonts.poppins(
-              fontSize: 12,
+              fontSize: labelFontSize,
               fontWeight: FontWeight.w600,
               color: Colors.white70,
               letterSpacing: 1.5,
             ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: padding * 0.4),
           TextField(
             controller: _nicknameController,
             style: GoogleFonts.poppins(
-              fontSize: 18,
+              fontSize: inputFontSize,
               color: Colors.white,
               fontWeight: FontWeight.w500,
             ),
             decoration: InputDecoration(
               hintText: 'Enter your name...',
-              hintStyle: GoogleFonts.poppins(color: Colors.white38),
+              hintStyle: GoogleFonts.poppins(
+                color: Colors.white38,
+                fontSize: inputFontSize * 0.9,
+              ),
               border: InputBorder.none,
               prefixIcon: Icon(
                 Icons.person_outline,
                 color: _isNicknameValid
                     ? const Color(0xFF74E67C)
                     : Colors.white54,
+                size: inputFontSize * 1.2,
               ),
               suffixIcon: _isNicknameValid
-                  ? const Icon(Icons.check_circle, color: Color(0xFF74E67C))
+                  ? Icon(
+                      Icons.check_circle,
+                      color: const Color(0xFF74E67C),
+                      size: inputFontSize * 1.2,
+                    )
                   : null,
             ),
             textCapitalization: TextCapitalization.words,
@@ -232,41 +272,50 @@ class _OnlineLobbyScreenState extends State<OnlineLobbyScreen> {
   }
 
   Widget _buildActionButton({
+    required double screenWidth,
     required IconData icon,
     required String label,
     required String description,
     required Color color,
     required VoidCallback onTap,
   }) {
+    final maxWidth = (screenWidth * 0.9).clamp(300.0, 500.0);
+    final padding = (screenWidth * 0.05).clamp(16.0, 24.0);
+    final iconSize = (screenWidth * 0.08).clamp(28.0, 40.0);
+    final labelFontSize = (screenWidth * 0.05).clamp(18.0, 24.0);
+    final descFontSize = (screenWidth * 0.03).clamp(11.0, 14.0);
+    final borderRadius = (screenWidth * 0.05).clamp(16.0, 24.0);
+    final arrowSize = (screenWidth * 0.05).clamp(18.0, 24.0);
+
     return Container(
-      constraints: const BoxConstraints(maxWidth: 400),
+      constraints: BoxConstraints(maxWidth: maxWidth),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(borderRadius),
           child: Container(
-            padding: const EdgeInsets.all(20),
+            padding: EdgeInsets.all(padding),
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [color.withOpacity(0.3), color.withOpacity(0.1)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(borderRadius),
               border: Border.all(color: color.withOpacity(0.5), width: 2),
             ),
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: EdgeInsets.all(padding * 0.6),
                   decoration: BoxDecoration(
                     color: color.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(borderRadius * 0.6),
                   ),
-                  child: Icon(icon, color: color, size: 32),
+                  child: Icon(icon, color: color, size: iconSize),
                 ),
-                const SizedBox(width: 16),
+                SizedBox(width: padding * 0.8),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -274,22 +323,22 @@ class _OnlineLobbyScreenState extends State<OnlineLobbyScreen> {
                       Text(
                         label,
                         style: GoogleFonts.hanaleiFill(
-                          fontSize: 20,
+                          fontSize: labelFontSize,
                           color: Colors.white,
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      SizedBox(height: padding * 0.2),
                       Text(
                         description,
                         style: GoogleFonts.poppins(
-                          fontSize: 12,
+                          fontSize: descFontSize,
                           color: Colors.white60,
                         ),
                       ),
                     ],
                   ),
                 ),
-                Icon(Icons.arrow_forward_ios, color: color, size: 20),
+                Icon(Icons.arrow_forward_ios, color: color, size: arrowSize),
               ],
             ),
           ),

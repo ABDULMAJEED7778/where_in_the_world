@@ -15,39 +15,44 @@ class GuessDialog extends StatefulWidget {
 
 class _GuessDialogState extends State<GuessDialog> {
   final TextEditingController _guessController = TextEditingController();
-  final LayerLink _layerLink = LayerLink(); // ✅ 1. Create a LayerLink
+  final LayerLink _layerLink = LayerLink();
   bool _isButtonEnabled = false;
   String? _selectedPlayerId;
 
   @override
   void initState() {
     super.initState();
-    // ✅ 2. Add a listener to the controller
-    // This function will be called every time the text changes.
     _guessController.addListener(() {
-      // Check if the button's state needs to be changed
       final isTextNotEmpty = _guessController.text.trim().isNotEmpty;
       if (isTextNotEmpty != _isButtonEnabled) {
-        // Use setState to rebuild the widget and update the button
         setState(() {
           _isButtonEnabled = isTextNotEmpty;
         });
       }
     });
-
-    // We'll set a default selected player later in didChangeDependencies
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (_selectedPlayerId == null) {
-      final players = context.read<GameProvider>().gameState.players;
-      final current = context.read<GameProvider>().gameState.currentPlayer;
-      if (current != null) {
+      final gameState = context.read<GameProvider>().gameState;
+      final players = gameState.players;
+      final playersWhoGuessed = gameState.playersWhoGuessed;
+
+      final current = gameState.currentPlayer;
+      if (current != null && !playersWhoGuessed.contains(current.id)) {
         _selectedPlayerId = current.id;
-      } else if (players.isNotEmpty) {
-        _selectedPlayerId = players.first.id;
+      } else {
+        // Find first player who hasn't guessed
+        try {
+          final firstUnplayed = players.firstWhere(
+            (p) => !playersWhoGuessed.contains(p.id),
+          );
+          _selectedPlayerId = firstUnplayed.id;
+        } catch (_) {
+          // Everyone has guessed
+        }
       }
     }
   }
@@ -67,310 +72,378 @@ class _GuessDialogState extends State<GuessDialog> {
       orElse: () =>
           players.isNotEmpty ? players.first : Player(name: 'Unknown'),
     );
+    final screenWidth = MediaQuery.of(context).size.width;
 
-    return AlertDialog(
+    // Dynamic responsive values based on screen width
+    // Dialog width: 85% on small screens, max 500px on large screens
+    final dialogWidth = (screenWidth * 0.85).clamp(280.0, 500.0);
+
+    // Font sizes scale with screen width
+    final titleFontSize = (screenWidth * 0.045).clamp(16.0, 22.0);
+    final bodyFontSize = (screenWidth * 0.035).clamp(12.0, 16.0);
+    final hintFontSize = (screenWidth * 0.028).clamp(10.0, 14.0);
+
+    // Padding and spacing scale with screen width
+    final padding = (screenWidth * 0.04).clamp(14.0, 24.0);
+    final borderRadius = (screenWidth * 0.03).clamp(10.0, 20.0);
+
+    // Button sizing
+    final buttonHeight = (screenWidth * 0.1).clamp(40.0, 52.0);
+    final playerBadgePadding = (screenWidth * 0.02).clamp(6.0, 12.0);
+
+    return Dialog(
       backgroundColor: const Color(0xFF2D1B69).withOpacity(0.95),
-      title: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            'Make Your Guess',
-            style: GoogleFonts.poppins(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 20,
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFEA00),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.black, width: 2),
-            ),
-            child: Stack(
-              alignment: Alignment.center,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(borderRadius),
+      ),
+      child: Container(
+        width: dialogWidth,
+        padding: EdgeInsets.all(padding),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Title row
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  currentPlayer.name.toUpperCase(),
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                    letterSpacing: 1.0,
-                    foreground: Paint()
-                      ..style = PaintingStyle.stroke
-                      ..strokeWidth = 1.5
-                      ..color = Colors.black,
-                  ),
-                ),
-                Text(
-                  currentPlayer.name.toUpperCase(),
-                  style: const TextStyle(
+                  'Make Your Guess',
+                  style: GoogleFonts.hanaleiFill(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                    letterSpacing: 1.0,
+                    fontSize: titleFontSize,
+                  ),
+                ),
+                Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: playerBadgePadding * 1.5,
+                    vertical: playerBadgePadding * 0.75,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFEA00),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.black, width: 2),
+                  ),
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Text(
+                        currentPlayer.name.toUpperCase(),
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: hintFontSize,
+                          letterSpacing: 1.0,
+                          foreground: Paint()
+                            ..style = PaintingStyle.stroke
+                            ..strokeWidth = 1.5
+                            ..color = Colors.black,
+                        ),
+                      ),
+                      Text(
+                        currentPlayer.name.toUpperCase(),
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: hintFontSize,
+                          letterSpacing: 1.0,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
-          ),
-        ],
-      ),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Only show in multiplayer mode
-          Builder(
-            builder: (context) {
-              final gameMode = context
-                  .read<GameProvider>()
-                  .gameState
-                  .settings
-                  .gameMode;
-              final players = context.read<GameProvider>().gameState.players;
 
-              // Don't show player selector in single player mode
-              if (gameMode == GameMode.singlePlayer || players.length <= 1) {
-                return const SizedBox.shrink();
-              }
+            SizedBox(height: padding),
 
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: Row(
-                  children: [
-                    Text(
-                      'Guessing as: ',
-                      style: GoogleFonts.poppins(color: Colors.white70),
-                    ),
-                    const SizedBox(width: 8),
-                    if (players.isEmpty)
-                      const Text(
-                        'No players',
-                        style: TextStyle(color: Colors.white70),
-                      )
-                    else
-                      DropdownButton<String>(
-                        dropdownColor: const Color(0xFF3c2a85),
-                        value: _selectedPlayerId,
-                        style: GoogleFonts.poppins(color: Colors.white),
-                        underline: Container(
-                          height: 2,
-                          color: const Color(0xFFFFEA00),
-                        ),
-                        items: players.map((p) {
-                          return DropdownMenuItem<String>(
-                            value: p.id,
-                            child: Text(p.name),
-                          );
-                        }).toList(),
-                        onChanged: (val) {
-                          setState(() {
-                            _selectedPlayerId = val;
-                          });
-                        },
-                      ),
-                  ],
-                ),
-              );
-            },
-          ),
+            // Player selector (only in multiplayer)
+            Builder(
+              builder: (context) {
+                final gameState = context.read<GameProvider>().gameState;
+                final gameMode = gameState.settings.gameMode;
+                final players = gameState.players;
+                final playersWhoGuessed = gameState.playersWhoGuessed;
 
-          // const SizedBox(height: 12), // Removed as padding is added to player selector
-          CompositedTransformTarget(
-            link: _layerLink,
-            child: Autocomplete<String>(
-              optionsBuilder: (TextEditingValue textEditingValue) {
-                final String query = textEditingValue.text.trim().toLowerCase();
-                if (query.length < 2) {
-                  return const Iterable<String>.empty();
+                final availablePlayers = players
+                    .where((p) => !playersWhoGuessed.contains(p.id))
+                    .toList();
+
+                if (gameMode == GameMode.singlePlayer ||
+                    availablePlayers.length <= 1) {
+                  return const SizedBox.shrink();
                 }
-                final suggestions = allCountries.where((String country) {
-                  return country.toLowerCase().startsWith(query);
-                });
-                // You can uncomment this now, it will work!
-                // print('Query: "$query", Suggestions: ${suggestions.length}');
-                return suggestions;
-              },
-              onSelected: (String selection) {
-                // When a user selects an item, update our controller.
-                // This ensures the button state updates correctly.
-                _guessController.text = selection;
-                // Move cursor to the end
-                _guessController.selection = TextSelection.fromPosition(
-                  TextPosition(offset: _guessController.text.length),
+
+                return Padding(
+                  padding: EdgeInsets.only(bottom: padding),
+                  child: Row(
+                    children: [
+                      Text(
+                        'Guessing as: ',
+                        style: GoogleFonts.hanaleiFill(
+                          color: Colors.white70,
+                          fontSize: bodyFontSize,
+                        ),
+                      ),
+                      SizedBox(width: padding * 0.5),
+                      if (availablePlayers.isEmpty)
+                        Text(
+                          'Everyone has guessed',
+                          style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: bodyFontSize,
+                          ),
+                        )
+                      else
+                        DropdownButton<String>(
+                          dropdownColor: const Color(0xFF3c2a85),
+                          value: _selectedPlayerId,
+                          style: GoogleFonts.hanaleiFill(
+                            color: Colors.white,
+                            fontSize: bodyFontSize,
+                          ),
+                          underline: Container(
+                            height: 2,
+                            color: const Color(0xFFFFEA00),
+                          ),
+                          items: availablePlayers.map((p) {
+                            return DropdownMenuItem<String>(
+                              value: p.id,
+                              child: Text(p.name),
+                            );
+                          }).toList(),
+                          onChanged: (val) {
+                            setState(() {
+                              _selectedPlayerId = val;
+                            });
+                          },
+                        ),
+                    ],
+                  ),
                 );
               },
-              fieldViewBuilder:
-                  (
-                    BuildContext context,
-                    TextEditingController
-                    fieldTextEditingController, // This is the controller Autocomplete uses
-                    FocusNode fieldFocusNode,
-                    VoidCallback onFieldSubmitted,
-                  ) {
-                    // ✅ FIX 1: The TextField MUST use the 'fieldTextEditingController'
-                    return TextField(
-                      controller: fieldTextEditingController,
-                      focusNode: fieldFocusNode,
-                      showCursor: true,
-                      cursorColor: const Color(0xFFFFEA00),
-                      // ✅ FIX 2: Sync the changes back to our own controller
-                      onChanged: (String text) {
-                        // This keeps our listener in initState working for the button state
-                        _guessController.text = text;
-                      },
-                      style: GoogleFonts.poppins(color: Colors.white),
-                      decoration: InputDecoration(
-                        hintText: 'Enter country name...',
-                        hintStyle: GoogleFonts.poppins(color: Colors.white38),
-                        filled: true,
-                        fillColor: Colors.white.withOpacity(0.05),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                            color: Colors.white.withOpacity(0.3),
+            ),
+
+            // Country input with autocomplete
+            CompositedTransformTarget(
+              link: _layerLink,
+              child: Autocomplete<String>(
+                optionsBuilder: (TextEditingValue textEditingValue) {
+                  final String query = textEditingValue.text
+                      .trim()
+                      .toLowerCase();
+                  if (query.length < 2) {
+                    return const Iterable<String>.empty();
+                  }
+                  final suggestions = allCountries.where((String country) {
+                    return country.toLowerCase().startsWith(query);
+                  });
+                  return suggestions;
+                },
+                onSelected: (String selection) {
+                  _guessController.text = selection;
+                  _guessController.selection = TextSelection.fromPosition(
+                    TextPosition(offset: _guessController.text.length),
+                  );
+                },
+                fieldViewBuilder:
+                    (
+                      BuildContext context,
+                      TextEditingController fieldTextEditingController,
+                      FocusNode fieldFocusNode,
+                      VoidCallback onFieldSubmitted,
+                    ) {
+                      return TextField(
+                        controller: fieldTextEditingController,
+                        focusNode: fieldFocusNode,
+                        showCursor: true,
+                        cursorColor: const Color(0xFFFFEA00),
+                        onChanged: (String text) {
+                          _guessController.text = text;
+                        },
+                        style: GoogleFonts.hanaleiFill(
+                          color: Colors.white,
+                          fontSize: bodyFontSize,
+                        ),
+                        decoration: InputDecoration(
+                          hintText: 'Enter country name...',
+                          hintStyle: GoogleFonts.hanaleiFill(
+                            color: Colors.white38,
+                            fontSize: bodyFontSize * 0.9,
+                          ),
+                          filled: true,
+                          fillColor: Colors.white.withOpacity(0.05),
+                          contentPadding: EdgeInsets.all(padding * 0.75),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(
+                              borderRadius * 0.75,
+                            ),
+                            borderSide: BorderSide(
+                              color: Colors.white.withOpacity(0.3),
+                            ),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(
+                              borderRadius * 0.75,
+                            ),
+                            borderSide: BorderSide(
+                              color: Colors.white.withOpacity(0.3),
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(
+                              borderRadius * 0.75,
+                            ),
+                            borderSide: const BorderSide(
+                              color: Color(0xFFFFEA00),
+                              width: 2,
+                            ),
                           ),
                         ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                            color: Colors.white.withOpacity(0.3),
-                          ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                            color: Color(0xFFFFEA00),
-                          ),
-                        ),
-                      ),
-                      textCapitalization: TextCapitalization.words,
-                    );
-                  },
-              // The optionsViewBuilder remains the same as before, it was correct.
-              optionsViewBuilder:
-                  (
-                    BuildContext context,
-                    AutocompleteOnSelected<String> onSelected,
-                    Iterable<String> options,
-                  ) {
-                    return CompositedTransformFollower(
-                      link: _layerLink,
-                      showWhenUnlinked: false,
-                      offset: const Offset(0.0, 56.0),
-                      child: Material(
-                        elevation: 4.0,
-                        color: const Color(0xFF3c2a85),
-                        borderRadius: BorderRadius.circular(8),
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(
-                            maxHeight: 200,
-                            maxWidth: 300,
-                          ),
-                          child: ListView.builder(
-                            padding: EdgeInsets.zero,
-                            shrinkWrap: true,
-                            itemCount: options.length,
-                            itemBuilder: (BuildContext context, int index) {
-                              final String option = options.elementAt(index);
-                              return InkWell(
-                                onTap: () {
-                                  onSelected(option);
-                                },
-                                child: Padding(
-                                  padding: const EdgeInsets.all(16.0),
-                                  child: Text(
-                                    option,
-                                    style: GoogleFonts.poppins(
-                                      color: Colors.white,
+                        textCapitalization: TextCapitalization.words,
+                      );
+                    },
+                optionsViewBuilder:
+                    (
+                      BuildContext context,
+                      AutocompleteOnSelected<String> onSelected,
+                      Iterable<String> options,
+                    ) {
+                      return CompositedTransformFollower(
+                        link: _layerLink,
+                        showWhenUnlinked: false,
+                        offset: Offset(0.0, buttonHeight + 12),
+                        child: Material(
+                          elevation: 4.0,
+                          color: const Color(0xFF3c2a85),
+                          borderRadius: BorderRadius.circular(8),
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxHeight: 200,
+                              maxWidth: dialogWidth - (padding * 2),
+                            ),
+                            child: ListView.builder(
+                              padding: EdgeInsets.zero,
+                              shrinkWrap: true,
+                              itemCount: options.length,
+                              itemBuilder: (BuildContext context, int index) {
+                                final String option = options.elementAt(index);
+                                return InkWell(
+                                  onTap: () {
+                                    onSelected(option);
+                                  },
+                                  child: Padding(
+                                    padding: EdgeInsets.all(padding * 0.75),
+                                    child: Text(
+                                      option,
+                                      style: GoogleFonts.hanaleiFill(
+                                        color: Colors.white,
+                                        fontSize: bodyFontSize,
+                                      ),
                                     ),
                                   ),
-                                ),
-                              );
-                            },
+                                );
+                              },
+                            ),
                           ),
                         ),
-                      ),
-                    );
-                  },
-            ),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              const Icon(
-                Icons.warning_amber_rounded,
-                color: Colors.orange,
-                size: 16,
+                      );
+                    },
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'You cannot cancel your guess after submitting!',
-                  style: GoogleFonts.poppins(
-                    color: Colors.orange,
-                    fontSize: 11,
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-      actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text(
-            'CANCEL',
-            style: GoogleFonts.poppins(
-              color: Colors.white70,
-              fontWeight: FontWeight.bold,
             ),
-          ),
-        ),
-        SizedBox(
-          height: 48,
-          child: ElevatedButton(
-            onPressed: _isButtonEnabled ? _submitGuess : null,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFE63C3D),
-              disabledBackgroundColor: Colors.grey.withOpacity(0.3),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(100),
-              ),
-              elevation: 4,
-            ),
-            child: Stack(
-              alignment: Alignment.center,
+
+            SizedBox(height: padding * 0.75),
+
+            // Warning message
+            Row(
               children: [
-                Text(
-                  'GUESS!',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                    foreground: Paint()
-                      ..style = PaintingStyle.stroke
-                      ..strokeWidth = 2
-                      ..color = Colors.black,
-                  ),
+                Icon(
+                  Icons.warning_amber_rounded,
+                  color: Colors.orange,
+                  size: bodyFontSize * 1.2,
                 ),
-                const Text(
-                  'GUESS!',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
+                SizedBox(width: padding * 0.5),
+                Expanded(
+                  child: Text(
+                    'You cannot cancel your guess after submitting!',
+                    style: GoogleFonts.hanaleiFill(
+                      color: Colors.orange,
+                      fontSize: hintFontSize,
+                      fontStyle: FontStyle.italic,
+                    ),
                   ),
                 ),
               ],
             ),
-          ),
+
+            SizedBox(height: padding),
+
+            // Action buttons
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: TextButton.styleFrom(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: padding,
+                      vertical: padding * 0.5,
+                    ),
+                  ),
+                  child: Text(
+                    'CANCEL',
+                    style: GoogleFonts.hanaleiFill(
+                      color: Colors.white70,
+                      fontWeight: FontWeight.bold,
+                      fontSize: bodyFontSize,
+                    ),
+                  ),
+                ),
+                SizedBox(width: padding * 0.5),
+                SizedBox(
+                  height: buttonHeight,
+                  child: ElevatedButton(
+                    onPressed: _isButtonEnabled ? _submitGuess : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFE63C3D),
+                      disabledBackgroundColor: Colors.grey.withOpacity(0.3),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(buttonHeight / 2),
+                      ),
+                      elevation: 4,
+                      padding: EdgeInsets.symmetric(horizontal: padding * 1.5),
+                    ),
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Text(
+                          'GUESS!',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: bodyFontSize,
+                            foreground: Paint()
+                              ..style = PaintingStyle.stroke
+                              ..strokeWidth = 2
+                              ..color = Colors.black,
+                          ),
+                        ),
+                        Text(
+                          'GUESS!',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: bodyFontSize,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 

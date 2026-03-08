@@ -12,8 +12,9 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 ///    c) Pass it via --dart-define=GOOGLE_AI_API_KEY=your-key (compile-time)
 ///    d) Use the updateApiKey method from GameProvider
 class APIConfig {
-  // Default API key - replace with your own or use .env file
-  static const String _defaultApiKey = 'YOUR_API_KEY_HERE';
+  // API key - also configurable via .env file or --dart-define at build time
+  static const String _defaultApiKey =
+      'AIzaSyBtBCHB2irTBmFmCjg49SpH910EfHkjpS0';
 
   /// Get the API key from .env file, environment variable, or default
   static String getApiKey() {

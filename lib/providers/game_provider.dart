@@ -2,37 +2,96 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import '../models/game_models.dart';
-import '../services/ai_service.dart';
 import '../services/audio_service.dart';
 import '../services/photos_service.dart';
-import '../data/country_capitals.dart';
+import 'mixins/game_event_mixin.dart';
+import 'mixins/game_ai_mixin.dart';
+import 'mixins/game_geo_mixin.dart';
 
-class GameProvider extends ChangeNotifier {
-  AIService? _aiService;
+class GameProvider extends ChangeNotifier
+    with GameEventMixin, GameAIMixin, GameGeoMixin {
   late final PhotosService _photosService;
   final Set<String> _failedLandmarks = {};
   List<String> _turnOrder =
       []; // Randomized order of player IDs for current round
 
-  final _eventController = StreamController<GameEvent>.broadcast();
-  Stream<GameEvent> get events => _eventController.stream;
+  GameSettings? _nextRoundSettings;
+  GameSettings? get nextRoundSettings => _nextRoundSettings;
+
+  void updateNextRoundSettings(GameSettings settings) {
+    _nextRoundSettings = settings;
+    notifyListeners();
+  }
+
+  Timer? _turnTimer;
+  int _timeRemaining = 60;
+  int get timeRemaining => _timeRemaining;
+
+  void _startTurnTimer() {
+    _turnTimer?.cancel();
+    if (allQuestionsUsed) return;
+
+    if (!_gameState.settings.isTimerEnabled) {
+      _timeRemaining = _gameState.settings.turnDurationSeconds;
+      notifyListeners();
+      return;
+    }
+
+    _timeRemaining = _gameState.settings.turnDurationSeconds;
+    notifyListeners();
+
+    _resumeTurnTimer();
+  }
+
+  void _resumeTurnTimer() {
+    _turnTimer?.cancel();
+    if (allQuestionsUsed) return;
+
+    if (!_gameState.settings.isTimerEnabled) {
+      return;
+    }
+
+    _turnTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (allQuestionsUsed) {
+        timer.cancel();
+        return;
+      }
+
+      if (_timeRemaining > 0) {
+        _timeRemaining--;
+        if (_timeRemaining <= 10 && _timeRemaining > 0) {
+          AudioService().playTimerTick();
+        }
+        notifyListeners();
+      } else {
+        skipTurn();
+      }
+    });
+  }
+
+  void skipTurn() {
+    _turnTimer?.cancel();
+
+    // Decrease the remaining questions if possible
+    final currentPlayerId = _gameState.currentPlayer?.id;
+    if (currentPlayerId != null) {
+      final currentCounts = Map<String, int>.from(
+        _gameState.playerQuestionCounts,
+      );
+      final currentCount = currentCounts[currentPlayerId] ?? 0;
+      if (currentCount < _gameState.settings.questionsPerPlayer) {
+        currentCounts[currentPlayerId] = currentCount + 1;
+        _gameState = _gameState.copyWith(playerQuestionCounts: currentCounts);
+      }
+    }
+
+    emitTurnTimeout();
+    playTimeoutAudio();
+    _nextTurn();
+  }
 
   GameProvider() {
     _photosService = PhotosService();
-  }
-
-  AIService get _ai {
-    try {
-      _aiService ??= AIService();
-      print('AI Service initialized with API key');
-      return _aiService!;
-    } catch (e) {
-      // If AI service fails to initialize (e.g., missing API key),
-      // create a service that will fail gracefully when used
-      print('Warning: AI Service initialization issue: $e');
-      _aiService ??= AIService(apiKey: 'YOUR_API_KEY_HERE');
-      return _aiService!;
-    }
   }
 
   GameState _gameState = GameState(
@@ -47,7 +106,47 @@ class GameProvider extends ChangeNotifier {
     ),
   );
 
+  bool _isImageLoaded = false;
+  bool _isTimerPaused = false;
+
   GameState get gameState => _gameState;
+  bool get isImageLoaded => _isImageLoaded;
+  bool get isTimerPaused => _isTimerPaused;
+
+  bool get allQuestionsUsed {
+    if (_gameState.players.isEmpty) return false;
+    for (final player in _gameState.players) {
+      final count = _gameState.playerQuestionCounts[player.id] ?? 0;
+      if (count < _gameState.settings.questionsPerPlayer) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  void onImageLoaded() {
+    if (!_isImageLoaded) {
+      _isImageLoaded = true;
+      notifyListeners();
+      _startTurnTimer();
+    }
+  }
+
+  void pauseTimer() {
+    if (!_isTimerPaused) {
+      _isTimerPaused = true;
+      _turnTimer?.cancel();
+      notifyListeners();
+    }
+  }
+
+  void resumeTimer() {
+    if (_isTimerPaused) {
+      _isTimerPaused = false;
+      notifyListeners();
+      _resumeTurnTimer();
+    }
+  }
 
   void addPlayer(String name) {
     if (_gameState.players.length < 8) {
@@ -93,9 +192,7 @@ class GameProvider extends ChangeNotifier {
       );
 
       // Play game start sound and switch to gameplay music
-      AudioService().playGameStart();
-      await Future.delayed(const Duration(milliseconds: 500));
-      AudioService().playGameplayMusic();
+      playGameStartAudio();
 
       await _startNewRound(); // This will set up the first round
     }
@@ -130,7 +227,13 @@ class GameProvider extends ChangeNotifier {
     print('Difficulty level: ${_getDifficultyLevel()}');
 
     // Play round start sound
-    AudioService().playRoundStart();
+    playRoundStartAudio();
+
+    // Apply next round settings if any exist
+    if (_nextRoundSettings != null) {
+      _gameState = _gameState.copyWith(settings: _nextRoundSettings);
+      _nextRoundSettings = null; // Reset after applying
+    }
 
     // Randomize turn order for this round
     _turnOrder = _gameState.players.map((p) => p.id).toList();
@@ -153,6 +256,9 @@ class GameProvider extends ChangeNotifier {
       playerGuesses: {}, // Reset for the new round
       status: GameStatus.playing,
     );
+    _isImageLoaded = false;
+    _isTimerPaused = false;
+    _turnTimer?.cancel();
     notifyListeners();
   }
 
@@ -170,6 +276,8 @@ class GameProvider extends ChangeNotifier {
     );
 
     if (newLandmark != null) {
+      _isImageLoaded = false;
+      _turnTimer?.cancel();
       _gameState = _gameState.copyWith(currentLandmark: newLandmark);
       notifyListeners();
     } else {
@@ -188,22 +296,10 @@ class GameProvider extends ChangeNotifier {
     AudioService().playQuestionAsked();
 
     // Get AI answer
-    bool answer;
-    try {
-      answer = await _ai.answerQuestion(questionText, currentLandmark);
-    } catch (e) {
-      // If AI fails, default to false
-      // In production, you might want to show an error to the user
-      print('AI Error: $e');
-      answer = false;
-    }
+    final answer = await getAIAnswer(questionText, currentLandmark);
 
     // Play answer sound based on result
-    if (answer) {
-      AudioService().playAnswerYes();
-    } else {
-      AudioService().playAnswerNo();
-    }
+    playAnswerAudio(answer);
 
     // Create the question object with AI answer
     final question = Question(
@@ -232,16 +328,6 @@ class GameProvider extends ChangeNotifier {
     _nextTurn();
   }
 
-  /// Update API key for AI service
-  void updateAIApiKey(String apiKey) {
-    if (_aiService == null) {
-      _aiService = AIService(apiKey: apiKey);
-    } else {
-      _aiService!.updateApiKey(apiKey);
-    }
-    notifyListeners();
-  }
-
   void makeGuess(String country, {String? playerId}) {
     // Determine which player is making this guess.
     // If playerId is provided, use that player; otherwise use the current player.
@@ -253,13 +339,21 @@ class GameProvider extends ChangeNotifier {
 
     if (guesser == null) return;
 
+    // Prevent players from guessing more than once
+    if (_gameState.playersWhoGuessed.contains(guesser.id)) {
+      print(
+        'Player ${guesser.name} (${guesser.id}) already guessed. Ignoring guess.',
+      );
+      return;
+    }
+
     // Emit event for visual feedback immediately
     final correctAnswer = _gameState.currentLandmark?.country;
     if (correctAnswer != null) {
       if (country.toLowerCase() == correctAnswer.toLowerCase()) {
-        _eventController.add(GameEvent.correctGuess);
+        emitCorrectGuess();
       } else {
-        _eventController.add(GameEvent.incorrectGuess);
+        emitIncorrectGuess();
       }
     }
 
@@ -287,6 +381,7 @@ class GameProvider extends ChangeNotifier {
 
     if (isRoundOver) {
       // --- ROUND IS OVER ---
+      _turnTimer?.cancel();
       final correctAnswer = _gameState.currentLandmark!.country;
 
       // Calculate new scores based on the FINAL guess map.
@@ -300,7 +395,7 @@ class GameProvider extends ChangeNotifier {
         if (guess != null &&
             guess.toLowerCase() == correctAnswer.toLowerCase()) {
           // Play correct guess sound
-          AudioService().playCorrectGuess();
+          playCorrectGuessAudio();
           return player.copyWith(score: player.score + 10);
         }
 
@@ -316,21 +411,21 @@ class GameProvider extends ChangeNotifier {
 
       if (!anyCorrectGuess) {
         // Play incorrect guess sound (no one got it right)
-        AudioService().playIncorrectGuess();
+        playIncorrectGuessAudio();
 
         // Only find nearest guess in party mode (multiplayer) - single player doesn't need this
         if (_gameState.settings.gameMode == GameMode.partyMode) {
           // Find the nearest country and award 5 points
-          final nearestGuess = _findNearestGuess(
+          final nearestGuess = findNearestGuessPlayer(
             newPlayerGuesses,
             correctAnswer,
           );
           if (nearestGuess != null) {
             // Play nearest guess sound
-            AudioService().playNearestGuess();
+            playNearestGuessAudio();
 
             // Update the player with the nearest guess
-            final nearestPlayerId = nearestGuess['playerId'];
+            final nearestPlayerId = nearestGuess.playerId;
             final nearestPlayerIndex = updatedPlayers.indexWhere(
               (p) => p.id == nearestPlayerId,
             );
@@ -340,7 +435,7 @@ class GameProvider extends ChangeNotifier {
                     score: updatedPlayers[nearestPlayerIndex].score + 5,
                   );
               print(
-                'Nearest guess found: ${newPlayerGuesses[nearestPlayerId]} by player ${_gameState.players.firstWhere((p) => p.id == nearestPlayerId).name}, distance: ${nearestGuess["distance"]} km',
+                'Nearest guess found: ${newPlayerGuesses[nearestPlayerId]} by player ${_gameState.players.firstWhere((p) => p.id == nearestPlayerId).name}, distance: ${nearestGuess.distance} km',
               );
             }
           }
@@ -377,6 +472,12 @@ class GameProvider extends ChangeNotifier {
 
   /// Moves to the next player in the randomized turn order who has not yet guessed.
   void _nextTurn() {
+    if (allQuestionsUsed) {
+      _turnTimer?.cancel();
+      notifyListeners();
+      return;
+    }
+
     final players = _gameState.players;
     final currentPlayerId = _gameState.currentPlayer?.id;
     if (currentPlayerId == null || _turnOrder.isEmpty) return;
@@ -395,11 +496,12 @@ class GameProvider extends ChangeNotifier {
 
     _gameState = _gameState.copyWith(currentPlayer: nextPlayer);
     notifyListeners();
+    _startTurnTimer();
   }
 
   /// Proceeds to the next round or ends the game.
   Future<void> proceedToNextRound() async {
-    _eventController.add(GameEvent.roundTransition);
+    emitRoundTransition();
     if (_gameState.currentRound < _gameState.settings.numberOfRounds) {
       _gameState = _gameState.copyWith(
         currentRound: _gameState.currentRound + 1,
@@ -411,6 +513,7 @@ class GameProvider extends ChangeNotifier {
   }
 
   void _endGame() {
+    _turnTimer?.cancel();
     // Find the player with the highest score
     if (_gameState.players.isEmpty) return;
     final winner = _gameState.players.reduce(
@@ -418,65 +521,17 @@ class GameProvider extends ChangeNotifier {
     );
 
     // Play game end sound and victory music
-    AudioService().playGameEnd();
-    Future.delayed(const Duration(milliseconds: 500), () {
-      AudioService().playVictoryMusic();
-    });
+    playGameEndAudio();
 
     _gameState = _gameState.copyWith(gameEnded: true, winner: winner.name);
     notifyListeners();
   }
 
-  /// Finds the guess that is geographically nearest to the correct answer
-  /// Returns a map with 'playerId' and 'distance' (in km), or null if no valid guess found
-  Map<String, dynamic>? _findNearestGuess(
-    Map<String, String> playerGuesses,
-    String correctCountry,
-  ) {
-    final correctCapital = findCountryCapital(correctCountry);
-    if (correctCapital == null) {
-      print('Could not find capital for correct country: $correctCountry');
-      return null;
-    }
-
-    double nearestDistance = double.infinity;
-    String? nearestPlayerId;
-
-    for (final entry in playerGuesses.entries) {
-      final playerId = entry.key;
-      final guessedCountry = entry.value;
-
-      final guessCapital = findCountryCapital(guessedCountry);
-      if (guessCapital == null) {
-        print('Could not find capital for guessed country: $guessedCountry');
-        continue;
-      }
-
-      final distance = calculateDistance(
-        correctCapital.latitude,
-        correctCapital.longitude,
-        guessCapital.latitude,
-        guessCapital.longitude,
-      );
-
-      print(
-        'Distance from $guessedCountry to $correctCountry: ${distance.toStringAsFixed(2)} km',
-      );
-
-      if (distance < nearestDistance) {
-        nearestDistance = distance;
-        nearestPlayerId = playerId;
-      }
-    }
-
-    if (nearestPlayerId != null) {
-      return {'playerId': nearestPlayerId, 'distance': nearestDistance};
-    }
-
-    return null;
-  }
+  /// Public accessor for ending the game, used by integration tests.
+  void forceEndGame() => _endGame();
 
   void resetGame() {
+    _turnTimer?.cancel();
     _gameState = GameState(
       players: [],
       questionsAsked: [],
@@ -494,7 +549,8 @@ class GameProvider extends ChangeNotifier {
 
   @override
   void dispose() {
-    _eventController.close();
+    _turnTimer?.cancel();
+    disposeEvents();
     super.dispose();
   }
 }

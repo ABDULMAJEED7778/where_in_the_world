@@ -3,18 +3,19 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import '../models/game_models.dart';
 import '../models/online_game_models.dart';
-import '../services/ai_service.dart';
 import '../services/audio_service.dart';
 import '../services/photos_service.dart';
 import '../services/room_service.dart';
-import '../data/country_capitals.dart';
+import 'mixins/game_event_mixin.dart';
+import 'mixins/game_ai_mixin.dart';
+import 'mixins/game_geo_mixin.dart';
 
 /// Provider for managing online multiplayer game state
 /// Syncs all game actions to Firebase in real-time
-class OnlineGameProvider extends ChangeNotifier {
+class OnlineGameProvider extends ChangeNotifier
+    with GameEventMixin, GameAIMixin, GameGeoMixin {
   final RoomService _roomService = RoomService();
   final PhotosService _photosService = PhotosService();
-  AIService? _aiService;
 
   StreamSubscription? _roomSubscription;
   OnlineRoom? _room;
@@ -24,13 +25,23 @@ class OnlineGameProvider extends ChangeNotifier {
   bool _initialized = false;
   String? _error;
 
-  // Game event stream for visual feedback
-  final _eventController = StreamController<GameEvent>.broadcast();
-  Stream<GameEvent> get events => _eventController.stream;
+  Timer? _uiTimer;
+  bool _isProcessingTimeout = false;
+  String? _lastTimeoutPlayerId;
+  bool _isImageLoaded = false;
+
+  int get timeRemaining {
+    final endTimeStr = gameState?.turnEndTime;
+    if (endTimeStr == null) return 60; // Wait for image to load
+    final endTime = DateTime.parse(endTimeStr);
+    final remaining = endTime.difference(DateTime.now().toUtc()).inSeconds;
+    return remaining > 0 ? remaining : 0;
+  }
 
   // Getters
   OnlineRoom? get room => _room;
   Landmark? get currentLandmark => _currentLandmark;
+  bool get isImageLoaded => _isImageLoaded;
   bool get isHost => _isHost;
   bool get isLoading => _isLoading;
   bool get initialized => _initialized;
@@ -69,12 +80,6 @@ class OnlineGameProvider extends ChangeNotifier {
 
   // Questions for current round
   List<OnlineQuestion> get questions => gameState?.questions ?? [];
-
-  // AI Service
-  AIService get _ai {
-    _aiService ??= AIService();
-    return _aiService!;
-  }
 
   /// Initialize and listen to room updates
   Future<void> initializeRoom(String roomCode) async {
@@ -151,9 +156,97 @@ class OnlineGameProvider extends ChangeNotifier {
         (_currentLandmark == null ||
             _currentLandmark!.name != room.gameState.currentLandmarkId)) {
       print('📦 Loading landmark: ${room.gameState.currentLandmarkId}');
+      _isImageLoaded = false;
       await _loadLandmark(room.gameState.currentLandmarkId!);
     } else {
       print('🔄 _handleRoomUpdate: Skipping landmark load');
+    }
+
+    _manageUiTimer();
+  }
+
+  void onImageLoaded() {
+    if (!_isImageLoaded) {
+      _isImageLoaded = true;
+      notifyListeners();
+
+      // If we're the host and haven't started the turn timer yet, start it now
+      if (_isHost &&
+          gameState?.turnEndTime == null &&
+          status == OnlineGameStatus.playing) {
+        if (gameState?.isTimerEnabled == true) {
+          final duration = gameState?.turnDurationSeconds ?? 60;
+          final newEndTime = DateTime.now()
+              .toUtc()
+              .add(Duration(seconds: duration))
+              .toIso8601String();
+          _roomService.updateGameStateFields({'turnEndTime': newEndTime});
+        }
+      }
+    }
+  }
+
+  void _manageUiTimer() {
+    if (isPlaying && (gameState?.isTimerEnabled ?? true)) {
+      if (_uiTimer == null || !_uiTimer!.isActive) {
+        _uiTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+          notifyListeners();
+
+          final remaining = timeRemaining;
+          if (remaining <= 10 &&
+              remaining > 0 &&
+              gameState?.turnEndTime != null) {
+            AudioService().playTimerTick();
+          }
+
+          if (remaining <= 0 &&
+              _lastTimeoutPlayerId != gameState?.currentPlayerId &&
+              gameState?.turnEndTime != null) {
+            _lastTimeoutPlayerId = gameState?.currentPlayerId;
+            emitTurnTimeout();
+            playTimeoutAudio();
+          }
+
+          if (_isHost && remaining <= 0 && gameState?.turnEndTime != null) {
+            _handleTurnTimeout();
+          }
+        });
+      }
+    } else {
+      _uiTimer?.cancel();
+      _uiTimer = null;
+    }
+  }
+
+  Future<void> _handleTurnTimeout() async {
+    if (_isProcessingTimeout) return;
+    _isProcessingTimeout = true;
+    try {
+      print("⏳ Turn timeout reached! Skipping turn...");
+
+      // Deduct a question by adding a system question
+      final currentId = gameState?.currentPlayerId;
+      if (currentId != null) {
+        final currentQuestionsAsked = questions
+            .where((q) => q.askedBy == currentId)
+            .length;
+        if (currentQuestionsAsked < questionsPerTurn) {
+          final systemQuestion = OnlineQuestion(
+            id: DateTime.now().millisecondsSinceEpoch.toString(),
+            askedBy: currentId,
+            askedByName: "System",
+            text: "(Turn expired)",
+            answer: false,
+          );
+          await _roomService.addQuestion(systemQuestion);
+        }
+      }
+
+      await _nextTurn();
+    } finally {
+      Future.delayed(const Duration(seconds: 2), () {
+        _isProcessingTimeout = false;
+      });
     }
   }
 
@@ -176,9 +269,7 @@ class OnlineGameProvider extends ChangeNotifier {
   Future<void> startGame() async {
     if (!_isHost || _room == null) return;
 
-    AudioService().playGameStart();
-    await Future.delayed(const Duration(milliseconds: 500));
-    AudioService().playGameplayMusic();
+    playGameStartAudio();
 
     await _startNewRound();
   }
@@ -187,7 +278,7 @@ class OnlineGameProvider extends ChangeNotifier {
   Future<void> _startNewRound() async {
     if (!_isHost) return;
 
-    AudioService().playRoundStart();
+    playRoundStartAudio();
 
     // Get a random landmark
     final difficulty = gameState?.difficulty ?? 1;
@@ -205,7 +296,7 @@ class OnlineGameProvider extends ChangeNotifier {
     final playerIds = players.map((p) => p.id).toList();
     playerIds.shuffle(Random());
 
-    // Update game state
+    // Update game state, leave turnEndTime null until image loads
     final newState = OnlineGameState(
       currentLandmarkId: landmark.name,
       currentPlayerId: playerIds.first,
@@ -216,9 +307,23 @@ class OnlineGameProvider extends ChangeNotifier {
       playerGuesses: {},
       questions: [],
       status: OnlineGameStatus.playing,
+      turnEndTime: null,
+      isTimerEnabled: gameState?.nextRoundTimerEnabled ?? true,
+      turnDurationSeconds: gameState?.nextRoundTurnDuration ?? 60,
+      nextRoundTimerEnabled: gameState?.nextRoundTimerEnabled ?? true,
+      nextRoundTurnDuration: gameState?.nextRoundTurnDuration ?? 60,
     );
 
     await _roomService.updateGameState(newState);
+  }
+
+  /// Update timer settings for the next round (host only)
+  Future<void> updateNextRoundTimerSettings(bool enabled, int duration) async {
+    if (!_isHost) return;
+    await _roomService.updateGameStateFields({
+      'nextRoundTimerEnabled': enabled,
+      'nextRoundTurnDuration': duration,
+    });
   }
 
   /// Ask a question
@@ -246,21 +351,11 @@ class OnlineGameProvider extends ChangeNotifier {
 
       // Get AI answer
       print('🤖 Requesting AI answer for: $questionText');
-      bool answer;
-      try {
-        answer = await _ai.answerQuestion(questionText, _currentLandmark!);
-        print('🤖 AI response: ${answer ? "YES" : "NO"}');
-      } catch (e) {
-        print('❌ AI Error in askQuestion: $e');
-        answer = false;
-      }
+      final answer = await getAIAnswer(questionText, _currentLandmark!);
+      print('🤖 AI response: ${answer ? "YES" : "NO"}');
 
       // Play answer sound
-      if (answer) {
-        AudioService().playAnswerYes();
-      } else {
-        AudioService().playAnswerNo();
-      }
+      playAnswerAudio(answer);
 
       // Create question
       final myId = currentPlayerId;
@@ -331,9 +426,17 @@ class OnlineGameProvider extends ChangeNotifier {
 
     if (nextPlayerId != null) {
       print('✅ Next player: $nextPlayerId');
-      await _roomService.updateGameStateFields({
-        'currentPlayerId': nextPlayerId,
-      });
+      final Map<String, dynamic> fields = {'currentPlayerId': nextPlayerId};
+      if (gameState?.isTimerEnabled == true) {
+        final duration = gameState?.turnDurationSeconds ?? 60;
+        fields['turnEndTime'] = DateTime.now()
+            .toUtc()
+            .add(Duration(seconds: duration))
+            .toIso8601String();
+      } else {
+        fields['turnEndTime'] = null;
+      }
+      await _roomService.updateGameStateFields(fields);
     } else {
       print('⚠️ No next player found (all have guessed?)');
     }
@@ -348,10 +451,10 @@ class OnlineGameProvider extends ChangeNotifier {
 
     // Emit event for visual feedback
     if (isCorrect) {
-      _eventController.add(GameEvent.correctGuess);
-      AudioService().playCorrectGuess();
+      emitCorrectGuess();
+      playCorrectGuessAudio();
     } else {
-      _eventController.add(GameEvent.incorrectGuess);
+      emitIncorrectGuess();
     }
 
     // Submit guess to Firebase
@@ -372,7 +475,9 @@ class OnlineGameProvider extends ChangeNotifier {
       print('✅ Correct guess or all guessed');
       await _endRound(guesses, correctAnswer);
     } else {
-      await _nextTurn();
+      if (currentPlayerId == gameState?.currentPlayerId) {
+        await _nextTurn();
+      }
     }
   }
 
@@ -381,8 +486,6 @@ class OnlineGameProvider extends ChangeNotifier {
     Map<String, String> guesses,
     String correctAnswer,
   ) async {
-    // if (!_isHost) return;
-
     // Calculate scores
     for (final player in players) {
       final guess = guesses[player.id];
@@ -408,27 +511,18 @@ class OnlineGameProvider extends ChangeNotifier {
     String? winReason;
 
     if (correctGuesserId != null) {
-      // Someone guessed correctly
       winnerId = correctGuesserId;
       winReason = 'correct';
-      // Score update already handled in the loop above?
-      // Wait, let's make sure score is updated for the WINNER only if multiple correct?
-      // Actually, standard game rules usually imply first correct wins round or all correct get points?
-      // For now, let's assume the first one who triggered it or just any correct one.
-      // Since map iteration order isn't guaranteed, let's find the one who triggered the round end if possible,
-      // but 'guesses' is a map.
-      // Simpler: If multiple people correct (rare in turn-based), pick one.
-      // But actually, usually only ONE person catches the round end in this flow.
     } else {
-      AudioService().playIncorrectGuess();
+      playIncorrectGuessAudio();
 
       // Find nearest guess and award 5 points
-      final nearest = _findNearestGuess(guesses, correctAnswer);
+      final nearest = findNearestGuessPlayer(guesses, correctAnswer);
       if (nearest != null) {
-        AudioService().playNearestGuess();
-        final player = players.firstWhere((p) => p.id == nearest);
+        playNearestGuessAudio();
+        final player = players.firstWhere((p) => p.id == nearest.playerId);
         await _roomService.updatePlayerScore(player.id, player.score + 5);
-        winnerId = nearest;
+        winnerId = nearest.playerId;
         winReason = 'nearest';
       }
     }
@@ -440,42 +534,11 @@ class OnlineGameProvider extends ChangeNotifier {
     });
   }
 
-  /// Find the player with the geographically nearest guess
-  String? _findNearestGuess(
-    Map<String, String> guesses,
-    String correctCountry,
-  ) {
-    final correctCapital = findCountryCapital(correctCountry);
-    if (correctCapital == null) return null;
-
-    double nearestDistance = double.infinity;
-    String? nearestPlayerId;
-
-    for (final entry in guesses.entries) {
-      final guessCapital = findCountryCapital(entry.value);
-      if (guessCapital == null) continue;
-
-      final distance = calculateDistance(
-        correctCapital.latitude,
-        correctCapital.longitude,
-        guessCapital.latitude,
-        guessCapital.longitude,
-      );
-
-      if (distance < nearestDistance) {
-        nearestDistance = distance;
-        nearestPlayerId = entry.key;
-      }
-    }
-
-    return nearestPlayerId;
-  }
-
   /// Proceed to next round (host only)
   Future<void> proceedToNextRound() async {
     if (!_isHost) return;
 
-    _eventController.add(GameEvent.roundTransition);
+    emitRoundTransition();
 
     if (currentRound < totalRounds) {
       await _startNewRound();
@@ -488,10 +551,7 @@ class OnlineGameProvider extends ChangeNotifier {
   Future<void> _endGame() async {
     if (!_isHost) return;
 
-    AudioService().playGameEnd();
-    Future.delayed(const Duration(milliseconds: 500), () {
-      AudioService().playVictoryMusic();
-    });
+    playGameEndAudio();
 
     await _roomService.updateGameStateFields({
       'status': OnlineGameStatus.gameEnded.name,
@@ -512,8 +572,9 @@ class OnlineGameProvider extends ChangeNotifier {
 
   @override
   void dispose() {
+    _uiTimer?.cancel();
     _roomSubscription?.cancel();
-    _eventController.close();
+    disposeEvents();
     super.dispose();
   }
 }

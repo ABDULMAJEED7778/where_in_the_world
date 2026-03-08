@@ -76,7 +76,7 @@ class LeaderboardDialog extends StatelessWidget {
                     style: GoogleFonts.hanaleiFill(
                       textStyle: const TextStyle(
                         color: Colors.white,
-                        fontSize: 32,
+                        fontSize: 26,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 2.0,
                       ),

@@ -34,6 +34,7 @@ class _OnlineGuessDialogState extends State<OnlineGuessDialog> {
 
   @override
   void dispose() {
+    _guessController.removeListener(() {});
     _guessController.dispose();
     super.dispose();
   }
@@ -42,244 +43,324 @@ class _OnlineGuessDialogState extends State<OnlineGuessDialog> {
   Widget build(BuildContext context) {
     final provider = context.watch<OnlineGameProvider>();
     final myId = provider.currentPlayerId;
+    final screenWidth = MediaQuery.of(context).size.width;
 
-    return AlertDialog(
+    // Dynamic responsive values based on screen width
+    // Dialog width: 85% on small screens, max 500px on large screens
+    final dialogWidth = (screenWidth * 0.85).clamp(280.0, 500.0);
+
+    // Font sizes scale with screen width
+    final titleFontSize = (screenWidth * 0.045).clamp(16.0, 22.0);
+    final bodyFontSize = (screenWidth * 0.035).clamp(12.0, 16.0);
+    final hintFontSize = (screenWidth * 0.028).clamp(10.0, 14.0);
+
+    // Padding and spacing scale with screen width
+    final padding = (screenWidth * 0.04).clamp(14.0, 24.0);
+    final borderRadius = (screenWidth * 0.03).clamp(10.0, 20.0);
+
+    // Button sizing
+    final buttonHeight = (screenWidth * 0.1).clamp(40.0, 52.0);
+    final playerBadgePadding = (screenWidth * 0.02).clamp(6.0, 12.0);
+
+    // Get player nickname
+    String playerNickname = 'PLAYER';
+    if (myId != null && provider.players.any((p) => p.id == myId)) {
+      playerNickname = provider.players
+          .firstWhere((p) => p.id == myId)
+          .nickname
+          .toUpperCase();
+    }
+
+    return Dialog(
       backgroundColor: const Color(0xFF2D1B69).withOpacity(0.95),
-      title: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            'Make Your Guess',
-            style: GoogleFonts.poppins(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 20,
-            ),
-          ),
-          if (myId != null)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFEA00),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.black, width: 2),
-              ),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  Text(
-                    provider.players.any((p) => p.id == myId)
-                        ? provider.players
-                              .firstWhere((p) => p.id == myId)
-                              .nickname
-                              .toUpperCase()
-                        : 'PLAYER',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                      letterSpacing: 1.0,
-                      foreground: Paint()
-                        ..style = PaintingStyle.stroke
-                        ..strokeWidth = 1.5
-                        ..color = Colors.black,
-                    ),
-                  ),
-                  Text(
-                    provider.players.any((p) => p.id == myId)
-                        ? provider.players
-                              .firstWhere((p) => p.id == myId)
-                              .nickname
-                              .toUpperCase()
-                        : 'PLAYER',
-                    style: const TextStyle(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(borderRadius),
+      ),
+      child: Container(
+        width: dialogWidth,
+        padding: EdgeInsets.all(padding),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Title row
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Flexible(
+                  child: Text(
+                    'Make Your Guess',
+                    style: GoogleFonts.hanaleiFill(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                      letterSpacing: 1.0,
+                      fontSize: titleFontSize,
                     ),
                   ),
-                ],
-              ),
+                ),
+                if (myId != null)
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: playerBadgePadding * 1.5,
+                      vertical: playerBadgePadding * 0.75,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFEA00),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.black, width: 2),
+                    ),
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Text(
+                          playerNickname,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: hintFontSize,
+                            letterSpacing: 1.0,
+                            foreground: Paint()
+                              ..style = PaintingStyle.stroke
+                              ..strokeWidth = 1.5
+                              ..color = Colors.black,
+                          ),
+                        ),
+                        Text(
+                          playerNickname,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: hintFontSize,
+                            letterSpacing: 1.0,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
             ),
-        ],
-      ),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          CompositedTransformTarget(
-            link: _layerLink,
-            child: Autocomplete<String>(
-              optionsBuilder: (TextEditingValue textEditingValue) {
-                final String query = textEditingValue.text.trim().toLowerCase();
-                if (query.length < 2) {
-                  return const Iterable<String>.empty();
-                }
-                return allCountries.where((String country) {
-                  return country.toLowerCase().startsWith(query);
-                });
-              },
-              onSelected: (String selection) {
-                _guessController.text = selection;
-                _guessController.selection = TextSelection.fromPosition(
-                  TextPosition(offset: _guessController.text.length),
-                );
-              },
-              fieldViewBuilder:
-                  (
-                    context,
-                    fieldTextEditingController,
-                    fieldFocusNode,
-                    onFieldSubmitted,
-                  ) {
-                    return TextField(
-                      controller: fieldTextEditingController,
-                      focusNode: fieldFocusNode,
-                      showCursor: true,
-                      cursorColor: const Color(0xFFFFEA00),
-                      onChanged: (String text) {
-                        _guessController.text = text;
-                      },
-                      style: GoogleFonts.poppins(color: Colors.white),
-                      decoration: InputDecoration(
-                        hintText: 'Enter country name...',
-                        hintStyle: GoogleFonts.poppins(color: Colors.white38),
-                        filled: true,
-                        fillColor: Colors.white.withOpacity(0.05),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                            color: Colors.white.withOpacity(0.3),
-                          ),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                            color: Colors.white.withOpacity(0.3),
-                          ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                            color: Color(0xFFFFEA00),
-                          ),
-                        ),
-                      ),
-                      textCapitalization: TextCapitalization.words,
-                    );
-                  },
-              optionsViewBuilder: (context, onSelected, options) {
-                return CompositedTransformFollower(
-                  link: _layerLink,
-                  showWhenUnlinked: false,
-                  offset: const Offset(0.0, 56.0),
-                  child: Material(
-                    elevation: 4.0,
-                    color: const Color(0xFF3c2a85),
-                    borderRadius: BorderRadius.circular(8),
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(
-                        maxHeight: 200,
-                        maxWidth: 300,
-                      ),
-                      child: ListView.builder(
-                        padding: EdgeInsets.zero,
-                        shrinkWrap: true,
-                        itemCount: options.length,
-                        itemBuilder: (BuildContext context, int index) {
-                          final String option = options.elementAt(index);
-                          return InkWell(
-                            onTap: () => onSelected(option),
-                            child: Padding(
-                              padding: const EdgeInsets.all(16.0),
-                              child: Text(
-                                option,
-                                style: GoogleFonts.poppins(color: Colors.white),
-                              ),
-                            ),
-                          );
+
+            SizedBox(height: padding),
+
+            // Country input with autocomplete
+            CompositedTransformTarget(
+              link: _layerLink,
+              child: Autocomplete<String>(
+                optionsBuilder: (TextEditingValue textEditingValue) {
+                  final String query = textEditingValue.text
+                      .trim()
+                      .toLowerCase();
+                  if (query.length < 2) {
+                    return const Iterable<String>.empty();
+                  }
+                  final suggestions = allCountries.where((String country) {
+                    return country.toLowerCase().startsWith(query);
+                  });
+                  return suggestions;
+                },
+                onSelected: (String selection) {
+                  _guessController.text = selection;
+                  _guessController.selection = TextSelection.fromPosition(
+                    TextPosition(offset: _guessController.text.length),
+                  );
+                },
+                fieldViewBuilder:
+                    (
+                      BuildContext context,
+                      TextEditingController fieldTextEditingController,
+                      FocusNode fieldFocusNode,
+                      VoidCallback onFieldSubmitted,
+                    ) {
+                      return TextField(
+                        controller: fieldTextEditingController,
+                        focusNode: fieldFocusNode,
+                        showCursor: true,
+                        cursorColor: const Color(0xFFFFEA00),
+                        onChanged: (String text) {
+                          _guessController.text = text;
                         },
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              const Icon(
-                Icons.warning_amber_rounded,
-                color: Colors.orange,
-                size: 16,
+                        style: GoogleFonts.hanaleiFill(
+                          color: Colors.white,
+                          fontSize: bodyFontSize,
+                        ),
+                        decoration: InputDecoration(
+                          hintText: 'Enter country name...',
+                          hintStyle: GoogleFonts.hanaleiFill(
+                            color: Colors.white38,
+                            fontSize: bodyFontSize * 0.9,
+                          ),
+                          filled: true,
+                          fillColor: Colors.white.withOpacity(0.05),
+                          contentPadding: EdgeInsets.all(padding * 0.75),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(
+                              borderRadius * 0.75,
+                            ),
+                            borderSide: BorderSide(
+                              color: Colors.white.withOpacity(0.3),
+                            ),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(
+                              borderRadius * 0.75,
+                            ),
+                            borderSide: BorderSide(
+                              color: Colors.white.withOpacity(0.3),
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(
+                              borderRadius * 0.75,
+                            ),
+                            borderSide: const BorderSide(
+                              color: Color(0xFFFFEA00),
+                              width: 2,
+                            ),
+                          ),
+                        ),
+                        textCapitalization: TextCapitalization.words,
+                      );
+                    },
+                optionsViewBuilder:
+                    (
+                      BuildContext context,
+                      AutocompleteOnSelected<String> onSelected,
+                      Iterable<String> options,
+                    ) {
+                      return CompositedTransformFollower(
+                        link: _layerLink,
+                        showWhenUnlinked: false,
+                        offset: Offset(0.0, buttonHeight + 12),
+                        child: Material(
+                          elevation: 4.0,
+                          color: const Color(0xFF3c2a85),
+                          borderRadius: BorderRadius.circular(8),
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxHeight: 200,
+                              maxWidth: dialogWidth - (padding * 2),
+                            ),
+                            child: ListView.builder(
+                              padding: EdgeInsets.zero,
+                              shrinkWrap: true,
+                              itemCount: options.length,
+                              itemBuilder: (BuildContext context, int index) {
+                                final String option = options.elementAt(index);
+                                return InkWell(
+                                  hoverColor: Colors.white.withOpacity(0.1),
+                                  onTap: () {
+                                    onSelected(option);
+                                  },
+                                  child: Padding(
+                                    padding: EdgeInsets.all(padding * 0.75),
+                                    child: Text(
+                                      option,
+                                      style: GoogleFonts.hanaleiFill(
+                                        color: Colors.white,
+                                        fontSize: bodyFontSize,
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                      );
+                    },
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'You cannot cancel your guess after submitting!',
-                  style: GoogleFonts.poppins(
-                    color: Colors.orange,
-                    fontSize: 11,
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-      actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text(
-            'CANCEL',
-            style: GoogleFonts.poppins(
-              color: Colors.white70,
-              fontWeight: FontWeight.bold,
             ),
-          ),
-        ),
-        SizedBox(
-          height: 48,
-          child: ElevatedButton(
-            onPressed: _isButtonEnabled ? _submitGuess : null,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFE63C3D),
-              disabledBackgroundColor: Colors.grey.withOpacity(0.3),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(100),
-              ),
-              elevation: 4,
-            ),
-            child: Stack(
-              alignment: Alignment.center,
+
+            SizedBox(height: padding * 0.75),
+
+            // Warning message
+            Row(
               children: [
-                Text(
-                  'GUESS!',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                    foreground: Paint()
-                      ..style = PaintingStyle.stroke
-                      ..strokeWidth = 2
-                      ..color = Colors.black,
-                  ),
+                Icon(
+                  Icons.warning_amber_rounded,
+                  color: Colors.orange,
+                  size: bodyFontSize * 1.2,
                 ),
-                const Text(
-                  'GUESS!',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
+                SizedBox(width: padding * 0.5),
+                Expanded(
+                  child: Text(
+                    'You cannot cancel your guess after submitting!',
+                    style: GoogleFonts.hanaleiFill(
+                      color: Colors.orange,
+                      fontSize: hintFontSize,
+                      fontStyle: FontStyle.italic,
+                    ),
                   ),
                 ),
               ],
             ),
-          ),
+
+            SizedBox(height: padding),
+
+            // Action buttons
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: TextButton.styleFrom(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: padding,
+                      vertical: padding * 0.5,
+                    ),
+                  ),
+                  child: Text(
+                    'CANCEL',
+                    style: GoogleFonts.hanaleiFill(
+                      color: Colors.white70,
+                      fontWeight: FontWeight.bold,
+                      fontSize: bodyFontSize,
+                    ),
+                  ),
+                ),
+                SizedBox(width: padding * 0.5),
+                SizedBox(
+                  height: buttonHeight,
+                  child: ElevatedButton(
+                    onPressed: _isButtonEnabled ? _submitGuess : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFE63C3D),
+                      disabledBackgroundColor: Colors.grey.withOpacity(0.3),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(buttonHeight / 2),
+                      ),
+                      elevation: 4,
+                      padding: EdgeInsets.symmetric(horizontal: padding * 1.5),
+                    ),
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Text(
+                          'GUESS!',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: bodyFontSize,
+                            foreground: Paint()
+                              ..style = PaintingStyle.stroke
+                              ..strokeWidth = 2
+                              ..color = Colors.black,
+                          ),
+                        ),
+                        Text(
+                          'GUESS!',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: bodyFontSize,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 
