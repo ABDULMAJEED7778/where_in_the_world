@@ -85,8 +85,17 @@ workflows:
       flutter: stable
       groups:
         - app_secrets
+        - keystore_credentials # You will need to create this in Codemagic UI
     
     scripts:
+      - name: Set up keystore for signing
+        script: |
+          # Codemagic will inject these from the environment group
+          echo "storePassword=$CM_KEYSTORE_PASSWORD" > android/key.properties
+          echo "keyPassword=$CM_KEY_PASSWORD" >> android/key.properties
+          echo "keyAlias=$CM_KEY_ALIAS" >> android/key.properties
+          echo "storeFile=$CM_KEYSTORE_PATH" >> android/key.properties
+          
       - name: Install dependencies
         script: flutter pub get
       
