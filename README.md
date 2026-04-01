@@ -2,6 +2,8 @@
 
 A geography quiz party game built with Flutter where players guess countries from landmark images.
 
+**🎮 [Play Now on the Web](https://whereintheworld-133f0.web.app/)**
+
 ---
 
 ## 📸 Screenshots
