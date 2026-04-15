@@ -41,8 +41,6 @@ A geography quiz party game built with Flutter where players guess countries fro
   </tr>
 </table>
 
-> 📝 **Note**: Add your screenshots to the `screenshots/` folder with the names shown above.
-
 ---
 
 ## 🎮 Game Overview
